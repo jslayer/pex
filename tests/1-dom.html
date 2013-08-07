@@ -10,17 +10,17 @@
 <div id="test3"></div>
 <div id="test4"></div>
 <div id="test5"></div>
-<script src="bower_components/requirejs/require.js"></script>
+<script src="../bower_components/requirejs/require.js"></script>
 <script>
     var ITERATIONS = 1;
     var MULTIPLIER = 10;
 
     require({
                 'paths' : {
-                    benchmark : 'bower_components/benchmark/benchmark',
-                    lodash    : 'bower_components/lodash/lodash',
-                    platform  : 'bower_components/benchmark/vendor/platform.js',
-                    jquery    : 'bower_components/jquery/jquery'
+                    benchmark : '../bower_components/benchmark/benchmark',
+                    lodash    : '../bower_components/lodash/lodash',
+                    platform  : '../bower_components/benchmark/vendor/platform.js',
+                    jquery    : '../bower_components/jquery/jquery'
 
                 }
             },
@@ -101,7 +101,7 @@
                 var clone;
 
                 for (var i = 0; i < ITERATIONS; i++) {
-                    clone = tpl.clone(true);
+                    clone = tpl.clone();
 
                     clone[0].childNodes[0].textContent = i;
 
@@ -135,37 +135,37 @@
 </script>
 
 <pre>
-i : 1
-    strings x 39,859 ops/sec ±5.25% (90 runs sampled)
-    clone x 33,096 ops/sec ±17.51% (78 runs sampled)
-    new x 73,108 ops/sec ±0.88% (90 runs sampled)
-    jquery strings x 12,583 ops/sec ±3.19% (82 runs sampled)
-    jquery clone x 6,098 ops/sec ±4.29% (82 runs sampled)
-        Fastest is new
-
-i : 10
-    strings x 6,948 ops/sec ±6.19% (84 runs sampled)
-    clone x 5,752 ops/sec ±16.66% (79 runs sampled)
-    new x 7,585 ops/sec ±6.78% (85 runs sampled)
-    jquery strings x 1,437 ops/sec ±11.70% (86 runs sampled)
-    jquery clone x 966 ops/sec ±5.20% (83 runs sampled)
-        Fastest is new,strings
-
-i : 100
-    strings x 817 ops/sec ±1.65% (85 runs sampled)
-    clone x 632 ops/sec ±15.40% (78 runs sampled)
-    new x 779 ops/sec ±6.89% (83 runs sampled)
-    jquery strings x 154 ops/sec ±4.34% (73 runs sampled)
-    jquery clone x 112 ops/sec ±4.86% (71 runs sampled)
-        Fastest is strings,new
-
-i : 1000
-    strings x 81.78 ops/sec ±6.44% (69 runs sampled)
-    clone x 61.05 ops/sec ±20.74% (60 runs sampled)
-    new x 81.21 ops/sec ±0.81% (61 runs sampled)
-    jquery strings x 16.61 ops/sec ±0.56% (41 runs sampled)
-    jquery clone x 10.67 ops/sec ±9.95% (32 runs sampled)
-        Fastest is new
+i : 1 
+    strings x 40,612 ops/sec ±3.47% (90 runs sampled) 
+    clone x 34,296 ops/sec ±16.70% (79 runs sampled) 
+    new x 74,794 ops/sec ±2.91% (81 runs sampled) 
+    jquery strings x 12,421 ops/sec ±8.24% (87 runs sampled) 
+    jquery clone x 6,317 ops/sec ±6.23% (86 runs sampled) 
+        Fastest is new 
+    
+i : 10 
+    strings x 7,417 ops/sec ±2.14% (89 runs sampled) 
+    clone x 6,502 ops/sec ±1.66% (77 runs sampled) 
+    new x 7,884 ops/sec ±12.66% (78 runs sampled) 
+    jquery strings x 1,486 ops/sec ±7.23% (86 runs sampled) 
+    jquery clone x 1,144 ops/sec ±6.16% (86 runs sampled) 
+        Fastest is strings 
+    
+i : 100 
+    strings x 815 ops/sec ±5.79% (84 runs sampled) 
+    clone x 704 ops/sec ±2.37% (76 runs sampled) 
+    new x 825 ops/sec ±1.66% (80 runs sampled) 
+    jquery strings x 146 ops/sec ±11.51% (77 runs sampled) 
+    jquery clone x 129 ops/sec ±4.42% (73 runs sampled) 
+        Fastest is new 
+    
+i : 1000 
+    strings x 84.91 ops/sec ±2.70% (71 runs sampled) 
+    clone x 69.87 ops/sec ±1.56% (62 runs sampled) 
+    new x 81.98 ops/sec ±1.44% (63 runs sampled) 
+    jquery strings x 15.29 ops/sec ±6.33% (39 runs sampled) 
+    jquery clone x 12.40 ops/sec ±9.28% (35 runs sampled) 
+        Fastest is strings
 </pre>
 
 <!--<applet code="nano" archive="bower_components/benchmark/nano.jar"></applet>-->
