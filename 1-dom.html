@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<div id="test1"></div>
+<div id="test2"></div>
+<div id="test3"></div>
+<div id="test4"></div>
+<div id="test5"></div>
+<script src="bower_components/requirejs/require.js"></script>
+<script>
+    var ITERATIONS = 1;
+    var MULTIPLIER = 10;
+
+    require({
+                'paths' : {
+                    benchmark : 'bower_components/benchmark/benchmark',
+                    lodash    : 'bower_components/lodash/lodash',
+                    platform  : 'bower_components/benchmark/vendor/platform.js',
+                    jquery    : 'bower_components/jquery/jquery'
+
+                }
+            },
+            ['benchmark', 'jquery'], function(Benchmark, jQuery){
+            var suite = new Benchmark.Suite;
+
+            suite.add('strings', function(){
+                var div = document.createElement('div');
+                var tpl = '<label>{label}<input type="checkbox" value="{value}" title="{label}"></label>';
+                var html = '';
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    html += tpl.replace(/{label}/g, i).replace(/{value}/, i)
+                }
+                div.innerHTML = html;
+            });
+
+            suite.add('clone', function(){
+                var div = document.createElement('div');
+
+                var tpl = document.createElement('label');
+                var text = document.createTextNode('');
+                var input = document.createElement('input');
+
+                input.type = 'checkbox';
+
+                tpl.appendChild(text);
+                tpl.appendChild(input);
+
+                var clone;
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    clone = tpl.cloneNode(true);
+
+                    clone.childNodes[0].textContent = i;
+                    clone.childNodes[1].value = i;
+                    clone.childNodes[1].title = i;
+
+                    div.appendChild(clone);
+                }
+            });
+
+            suite.add('new', function(){
+                var div = document.createElement('div');
+                var tpl, text, input;
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    tpl = document.createElement('label');
+                    text = document.createTextNode(i);
+                    input = document.createElement('input');
+
+                    input.type = 'checkbox';
+                    input.value = i;
+                    input.title = i;
+
+                    tpl.appendChild(text);
+                    tpl.appendChild(input);
+
+                    div.appendChild(tpl);
+                }
+            });
+
+            suite.add('jquery strings', function() {
+                var div = $('<div />');
+
+                var tpl = '<label>{label}<input type="checkbox" value="{value}" title="{label}"></label>';
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    div.append(tpl.replace(/{label}/g, i).replace(/{value}/, i));
+                }
+            });
+
+            suite.add('jquery clone', function() {
+                var div = $('<div />');
+
+                var tpl = $('<label>{label}<input type="checkbox" value="{value}" title="{label}"></label>');
+
+                var clone;
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    clone = tpl.clone(true);
+
+                    clone[0].childNodes[0].textContent = i;
+
+                    clone.find('input').attr({
+                                                 value : i,
+                                                 title : i
+                                             });
+
+                    div.append(clone);
+                }
+            });
+
+            suite.on('cycle', function(event){
+                console.log(String(event.target));
+            });
+
+            suite.on('complete', function(){
+                console.log('Fastest is ' + this.filter('fastest').pluck('name'));
+
+                if (ITERATIONS < 1000) {
+                    ITERATIONS *= MULTIPLIER;
+                    console.log('i :', ITERATIONS);
+                    suite.run({ 'async' : true });
+                }
+            });
+
+
+            console.log('i :', ITERATIONS);
+            suite.run({ 'async' : true });
+        });
+</script>
+
+<pre>
+i : 1
+    strings x 39,859 ops/sec ±5.25% (90 runs sampled)
+    clone x 33,096 ops/sec ±17.51% (78 runs sampled)
+    new x 73,108 ops/sec ±0.88% (90 runs sampled)
+    jquery strings x 12,583 ops/sec ±3.19% (82 runs sampled)
+    jquery clone x 6,098 ops/sec ±4.29% (82 runs sampled)
+        Fastest is new
+
+i : 10
+    strings x 6,948 ops/sec ±6.19% (84 runs sampled)
+    clone x 5,752 ops/sec ±16.66% (79 runs sampled)
+    new x 7,585 ops/sec ±6.78% (85 runs sampled)
+    jquery strings x 1,437 ops/sec ±11.70% (86 runs sampled)
+    jquery clone x 966 ops/sec ±5.20% (83 runs sampled)
+        Fastest is new,strings
+
+i : 100
+    strings x 817 ops/sec ±1.65% (85 runs sampled)
+    clone x 632 ops/sec ±15.40% (78 runs sampled)
+    new x 779 ops/sec ±6.89% (83 runs sampled)
+    jquery strings x 154 ops/sec ±4.34% (73 runs sampled)
+    jquery clone x 112 ops/sec ±4.86% (71 runs sampled)
+        Fastest is strings,new
+
+i : 1000
+    strings x 81.78 ops/sec ±6.44% (69 runs sampled)
+    clone x 61.05 ops/sec ±20.74% (60 runs sampled)
+    new x 81.21 ops/sec ±0.81% (61 runs sampled)
+    jquery strings x 16.61 ops/sec ±0.56% (41 runs sampled)
+    jquery clone x 10.67 ops/sec ±9.95% (32 runs sampled)
+        Fastest is new
+</pre>
+
+<!--<applet code="nano" archive="bower_components/benchmark/nano.jar"></applet>-->
+</body>
+</html>
