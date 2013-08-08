@@ -135,6 +135,8 @@
 </script>
 
 <pre>
+Chrome 28 (Linux)
+
 i : 1 
     strings x 40,612 ops/sec ±3.47% (90 runs sampled) 
     clone x 34,296 ops/sec ±16.70% (79 runs sampled) 
@@ -166,6 +168,37 @@ i : 1000
     jquery strings x 15.29 ops/sec ±6.33% (39 runs sampled) 
     jquery clone x 12.40 ops/sec ±9.28% (35 runs sampled) 
         Fastest is strings
+
+Chrome 28 (Desire V)
+    
+i : 1 
+    strings x 4,400 ops/sec ±9.49% (69 runs sampled)
+    clone x 2,906 ops/sec ±16.49% (51 runs sampled)
+    new x 5,929 ops/sec ±9.76% (62 runs sampled)
+    jquery strings x 493 ops/sec ±21.07% (47 runs sampled)
+    jquery clone x 339 ops/sec ±45.27% (58 runs sampled)
+        Fastest is new
+i : 10 
+    strings x 593 ops/sec ±12.34% (60 runs sampled)
+    clone x 704 ops/sec ±2.82% (73 runs sampled)
+    new x 666 ops/sec ±16.04% (39 runs sampled)
+    jquery strings x 123 ops/sec ±12.33% (58 runs sampled)
+    jquery clone x 111 ops/sec ±6.45% (59 runs sampled)
+        Fastest is clone
+i : 100 
+    strings x 46.05 ops/sec ±22.14% (42 runs sampled)
+    clone x 46.17 ops/sec ±22.32% (39 runs sampled)
+    new x 59.68 ops/sec ±10.73% (45 runs sampled)
+    jquery strings x 7.39 ops/sec ±75.41% (21 runs sampled)
+    jquery clone x 10.25 ops/sec ±16.64% (25 runs sampled)
+        Fastest is new
+i : 1000 
+    strings x 5.60 ops/sec ±31.78% (19 runs sampled)
+    clone x 5.36 ops/sec ±33.93% (19 runs sampled)
+    new x 7.51 ops/sec ±3.87% (15 runs sampled)
+    jquery strings x 1.23 ops/sec ±22.20% (8 runs sampled)
+    jquery clone x 1.02 ops/sec ±35.35% (7 runs sampled)
+        Fastest is new
 </pre>
 
 <!--<applet code="nano" archive="bower_components/benchmark/nano.jar"></applet>-->
