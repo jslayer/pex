@@ -14,6 +14,7 @@
 <script>
     var ITERATIONS = 1;
     var MULTIPLIER = 10;
+    var MAX = 1000;
 
     require({
                 'paths' : {
@@ -83,6 +84,57 @@
                 }
             });
 
+            suite.add('new array', function(){
+                var div = document.createElement('div');
+                var tpl, text, input;
+                var nodes = [];
+                var i, l;
+
+                for (i = 0; i < ITERATIONS; i++) {
+                    tpl = document.createElement('label');
+                    text = document.createTextNode(i);
+                    input = document.createElement('input');
+
+                    input.type = 'checkbox';
+                    input.value = i;
+                    input.title = i;
+
+                    tpl.appendChild(text);
+                    tpl.appendChild(input);
+
+                    nodes.push(tpl);
+                }
+
+                for(i=0, l = nodes.length; i < l; i++) {
+                    div.appendChild(nodes[i]);
+                }
+
+            });
+
+            suite.add('new frag', function(){
+                var div = document.createElement('div');
+                var tpl, text, input;
+
+                var frag = document.createDocumentFragment();
+
+                for (var i = 0; i < ITERATIONS; i++) {
+                    tpl = document.createElement('label');
+                    text = document.createTextNode(i);
+                    input = document.createElement('input');
+
+                    input.type = 'checkbox';
+                    input.value = i;
+                    input.title = i;
+
+                    tpl.appendChild(text);
+                    tpl.appendChild(input);
+
+                    frag.appendChild(tpl);
+                }
+
+                div.appendChild(frag);
+            });
+
             suite.add('jquery strings', function() {
                 var div = $('<div />');
 
@@ -121,7 +173,7 @@
             suite.on('complete', function(){
                 console.log('Fastest is ' + this.filter('fastest').pluck('name'));
 
-                if (ITERATIONS < 1000) {
+                if (ITERATIONS < MAX) {
                     ITERATIONS *= MULTIPLIER;
                     console.log('i :', ITERATIONS);
                     suite.run({ 'async' : true });
