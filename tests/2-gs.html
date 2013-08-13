@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<script>
+    function Base(){
+    }
+
+    Base.extend = function(name, P, px, sx){
+        var C, F, i;
+
+        F = function(){
+        };
+
+        C = function(){
+            P.apply(this, arguments);
+        };
+
+        F.prototype = P.prototype;
+        C.prototype = new F();
+
+        for (i in sx) {
+            C[i] = sx[i];
+        }
+
+        for (i in px) {
+            C.prototype[i] = px[i];
+        }
+
+        C.__super__ = P.prototype;
+        C.prototype.constructor = C;
+        C.prototype.name = name;
+
+        return C;
+    };
+
+    function A(){
+        var args = arguments,
+            l = this,
+            i,
+            _attrs = {};
+
+        this._listeners = {};
+
+        //create parents chain
+        this._chain = [];
+
+        do {
+            this._chain.unshift(l);
+        } while (l = l.constructor.__super__);
+
+        //collect & process ATTRS information
+        this._chain.map(function(o){
+            var i,
+                attrs = o.constructor.ATTRS;
+
+            if (attrs) {
+                for (i in attrs) {
+                    _attrs[i] = attrs[i];
+                }
+            }
+        }, this);
+
+        for (i in _attrs) {
+            this._define(i, _attrs[i]);
+        }
+
+        //call initializer of each chain item
+        this._chain.map(function(o){
+            if (o.initializer) {
+                o.initializer.apply(this, args);
+            }
+        }, this);
+    }
+
+    A.prototype._define = function(name, attrs){
+        var value, _get, _set;
+
+        value = attrs.value;
+
+        _get = attrs.get;
+        _set = attrs.set;
+
+        Object.defineProperty(this, name, {
+            set : function(nv){
+                var old = value,
+                    listeners = this._listeners[name + 'Change'];
+
+                value = _set ? _set.call(this, nv, name) : nv;
+
+                if (listeners) {
+                    listeners.forEach(function(ltr){
+                        ltr.cb.call(ltr.ctx || this, {
+                            newVal : nv,
+                            oldVal : old,
+                            target : this
+                        });
+                    }, this);
+                }
+
+                return value;
+            },
+            get : function(){
+                return _get ? _get.call(this, value, name) : value;
+            }
+        });
+    };
+
+    A.prototype.on = function(name, cb, context){
+        if (!this._listeners[name]) {
+            this._listeners[name] = [];
+        }
+
+        var listener = {
+            cb  : cb,
+            ctx : context
+        };
+
+        this._listeners[name].push(listener);
+
+        return listener;
+    };
+
+    A.prototype.detach = function(listener) {
+        //todo - implement
+    };
+
+    /*** ----------------------------------- ***/
+
+    var B = Base.extend('B', A, {
+        someMethod : function(){
+            console.log('B someMethod');
+        },
+
+        initializer : function(){
+            //console.log('B initializer', arguments);
+        }
+    }, {
+        ATTRS : {
+            value1 : {
+                value : 'value1'
+            },
+            value2 : {
+                value : 'value2'
+            }
+        }
+    });
+
+    var C = Base.extend('C', B, {
+        someOtherMethod : function(){
+            console.log('C someOtherMethod', arguments);
+        },
+
+        initializer : function(){
+            //console.log('C initializer', arguments);
+        }
+    }, {
+        ATTRS : {
+            value1 : {
+                value : 0
+            }
+        }
+    });
+
+    var c = new C;
+
+    c.on('value1Change', function(e){
+        console.log('A', e, this);
+    }, {a:1});
+
+    c.value1 = 1;
+
+    c.value1 = 2;
+</script>
+</body>
+</html>
