@@ -137,15 +137,15 @@
         }
 
         function re(o, pName){
-            var i;
-            var self = this;
+            var i,
+                self = this;
 
             switch (Object.prototype.toString.call(o)) {
                 case '[object Object]':
                     for (i in o) {
                         (function(){
-                            var value = o[i];
-                            var name = [pName, i].join('.');
+                            var value = o[i],
+                                name = [pName, i].join('.');
 
                             Object.defineProperty(o, i, {
                                 get : function(){
@@ -347,44 +347,6 @@
     a.users[1].name = 'DefaultUser';
 
     a.a.b.c.d = 10;
-
-    /*a.listen('b', function(e){
-     console.log('B :', e.data);
-     });
-
-     a.listen('b.c', function(e) {
-     console.log('B.C :', e.data);
-     });
-
-     a.listen('b.c.d', function(e) {
-     console.log('B.C.D :', e.data);
-     });
-
-     a.listen('b.c.e', function(e) {
-     console.log('B.C.E :', e.data);
-     });
-
-     console.log(a.b.c.d);
-
-     a.b.c.d++;
-
-     a.b.c = {
-     e : 1
-     };
-
-     a.b.c.e += 100;
-
-     a.listen('list', function(e){
-     console.log('LIST', e.data.newVal);
-     });
-
-     console.log(a.list);
-
-     a.list.push('NEW');
-
-     a.list.pop();
-
-     a.list = [2,3];*/
 
 </script>
 </body>
