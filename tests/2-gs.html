@@ -5,10 +5,65 @@
     <title></title>
 </head>
 <body>
+<div id="test">--</div>
 <script>
-    function Base(){
+    /**
+     * @param {Object?} cfg
+     * @constructor
+     */
+    function Base(cfg){
+        var args = arguments,
+            l = this,
+            i,
+            _attrs = {};
+
+        this._listeners = {};
+
+        //create parents chain
+        this._chain = [];
+
+        do {
+            this._chain.unshift(l);
+        } while (l = l.constructor.__super__);
+
+        //collect & process ATTRS information
+        this._chain.map(function(o){
+            var i,
+                attrs = o.constructor.ATTRS;
+
+            if (attrs) {
+                for (i in attrs) {
+                    _attrs[i] = attrs[i];
+                }
+            }
+        }, this);
+
+        for (i in cfg) {
+            if (!_attrs[i]) {
+                _attrs[i] = {};
+            }
+            _attrs[i].value = cfg[i];
+        }
+
+        for (i in _attrs) {
+            this._define(i, _attrs[i]);
+        }
+
+        //call initializer of each chain item
+        this._chain.map(function(o){
+            if (o.initializer) {
+                o.initializer.apply(this, args);
+            }
+        }, this);
     }
 
+    /**
+     * @param {string} name
+     * @param {Base} P
+     * @param {Object?} px
+     * @param {Object?} sx
+     * @returns {Function}
+     */
     Base.extend = function(name, P, px, sx){
         var C, F, i;
 
@@ -37,57 +92,31 @@
         return C;
     };
 
-    function A(){
-        var args = arguments,
-            l = this,
-            i,
-            _attrs = {};
-
-        this._listeners = {};
-
-        //create parents chain
-        this._chain = [];
-
-        do {
-            this._chain.unshift(l);
-        } while (l = l.constructor.__super__);
-
-        //collect & process ATTRS information
-        this._chain.map(function(o){
-            var i,
-                attrs = o.constructor.ATTRS;
-
-            if (attrs) {
-                for (i in attrs) {
-                    _attrs[i] = attrs[i];
-                }
-            }
-        }, this);
-
-        for (i in _attrs) {
-            this._define(i, _attrs[i]);
-        }
-
-        //call initializer of each chain item
-        this._chain.map(function(o){
-            if (o.initializer) {
-                o.initializer.apply(this, args);
-            }
-        }, this);
-    }
-
-    A.prototype._define = function(name, attrs){
+    /**
+     * @param {string} name
+     * @param {object?} attrs
+     * @private
+     */
+    Base.prototype._define = function(name, attrs){
         var value, _get, _set;
 
-        value = attrs.value;
+        if (attrs) {
+            /*value = Object.prototype.toString.call(attrs.value) === '[object Object]'
+                ? Object.create(attrs.value)
+                : attrs.value;*/
 
-        _get = attrs.get;
-        _set = attrs.set;
+            _get = attrs.get;
+            _set = attrs.set;
+        }
 
         Object.defineProperty(this, name, {
             set : function(nv){
+                console.log('SET', name);
+
+                debugger;
+
                 var old = value,
-                    listeners = this._listeners[name + 'Change'];
+                    listeners = this._listeners[name];
 
                 value = _set ? _set.call(this, nv, name) : nv;
 
@@ -101,15 +130,64 @@
                     }, this);
                 }
 
+                console.log(nv);
+
                 return value;
             },
             get : function(){
+                console.log('GET', name);
+                //debugger;
                 return _get ? _get.call(this, value, name) : value;
             }
         });
+
+        if (attrs && attrs.value) {
+            if (Object.prototype.toString.call(attrs.value) === '[object Object]') {
+                this[name] = Object.create(attrs.value);
+
+                var descriptor = Object.getOwnPropertyDescriptor(this, name);
+
+                //console.log(descriptor);
+
+                re(value, descriptor);
+            }
+            else {
+                this[name] = attrs.value;
+            }
+        }
+
+        function re(v, d) {
+            //console.log(v, d);
+            var i;
+            //console.log(arguments);
+            for (i in v) {
+                //console.log(i, v[i], d);
+
+                //console.log('re : for in :', i);
+
+                //v.__defineGetter__(i, d.get);
+
+                v.__defineSetter__(i, d.set);
+            }
+            //console.log('1');
+            /*var descriptor = Object.getOwnPropertyDescriptor(o, name);
+            var i;
+
+            console.log(name);
+
+            for(i in value) {
+                re.call(value, i);
+            }*/
+        }
     };
 
-    A.prototype.on = function(name, cb, context){
+    /**
+     * @param {string} name
+     * @param {Function} cb
+     * @param {object?} context
+     * @returns {{cb: *, ctx: *}}
+     */
+    Base.prototype.listen = function(name, cb, context){
         if (!this._listeners[name]) {
             this._listeners[name] = [];
         }
@@ -124,56 +202,64 @@
         return listener;
     };
 
-    A.prototype.detach = function(listener) {
+    Base.prototype.detach = function(listener){
         //todo - implement
     };
 
     /*** ----------------------------------- ***/
 
-    var B = Base.extend('B', A, {
-        someMethod : function(){
-            console.log('B someMethod');
-        },
-
+    /*var Widget = Base.extend('widget', Base, {
         initializer : function(){
-            //console.log('B initializer', arguments);
+            console.log(arguments, this.node);
+        },
+        render : function(node) {
+
         }
     }, {
         ATTRS : {
-            value1 : {
-                value : 'value1'
-            },
-            value2 : {
-                value : 'value2'
+            node : null,
+            sec  : {
+                value : 1
             }
         }
     });
 
-    var C = Base.extend('C', B, {
-        someOtherMethod : function(){
-            console.log('C someOtherMethod', arguments);
-        },
+    var w = new Widget({
+        node : document.getElementById('test')
+    });
 
-        initializer : function(){
-            //console.log('C initializer', arguments);
-        }
-    }, {
+    w.on('secChange', function(e){
+        this.node.innerText = e.newVal;
+    });
+
+    //console.log(w);
+    setInterval(function(){
+        w.sec = (new Date).getSeconds();
+    }, 1000);*/
+
+    var A = Base.extend('A', Base, null, {
         ATTRS : {
-            value1 : {
-                value : 0
-            }
+            b : null
         }
     });
 
-    var c = new C;
+    var a = new A({
+        b : {
+            c : 1
+        }
+    });
 
-    c.on('value1Change', function(e){
-        console.log('A', e, this);
-    }, {a:1});
+    a.listen('v', function(e){
+        //console.log(e.oldVal, e.newVal);
+    });
 
-    c.value1 = 1;
+    //console.log(a.v.a);
 
-    c.value1 = 2;
+    a.b.c = 1001;
+
+    /*a.v = {b : 2};
+
+    a.v.b = 3;*/
 </script>
 </body>
 </html>
