@@ -98,87 +98,78 @@
      * @private
      */
     Base.prototype._define = function(name, attrs){
-        var value, _get, _set;
-
-        if (attrs) {
-            /*value = Object.prototype.toString.call(attrs.value) === '[object Object]'
-                ? Object.create(attrs.value)
-                : attrs.value;*/
-
-            _get = attrs.get;
-            _set = attrs.set;
-        }
+        var value, _set, _get;
 
         Object.defineProperty(this, name, {
-            set : function(nv){
-                console.log('SET', name);
-
-                debugger;
-
-                var old = value,
-                    listeners = this._listeners[name];
+            set : function(nv) {
+                var old = value;
 
                 value = _set ? _set.call(this, nv, name) : nv;
 
-                if (listeners) {
-                    listeners.forEach(function(ltr){
-                        ltr.cb.call(ltr.ctx || this, {
-                            newVal : nv,
-                            oldVal : old,
-                            target : this
-                        });
-                    }, this);
-                }
+                this._emit({
+                    name   : name,
+                    newVal : nv,
+                    oldVal : old,
+                    target : this
+                });
 
-                console.log(nv);
+                re.call(this, value, name);
 
                 return value;
             },
-            get : function(){
-                console.log('GET', name);
-                //debugger;
+            get : function() {
                 return _get ? _get.call(this, value, name) : value;
             }
         });
 
-        if (attrs && attrs.value) {
-            if (Object.prototype.toString.call(attrs.value) === '[object Object]') {
-                this[name] = Object.create(attrs.value);
-
-                var descriptor = Object.getOwnPropertyDescriptor(this, name);
-
-                //console.log(descriptor);
-
-                re(value, descriptor);
-            }
-            else {
-                this[name] = attrs.value;
+        if (attrs) {
+            if (attrs.value) {
+                if (Object.prototype.toString.call(attrs.value) === '[object Object]') {
+                    this[name] = Object.create(attrs.value);
+                }
+                else {
+                    this[name] = attrs.value;
+                }
             }
         }
 
-        function re(v, d) {
-            //console.log(v, d);
+        function re(o, pName) {
             var i;
-            //console.log(arguments);
-            for (i in v) {
-                //console.log(i, v[i], d);
+            var self = this;
 
-                //console.log('re : for in :', i);
+            for(i in o) {
+                (function() {
+                    var value = o[i];
+                    var name = [pName, i].join('.');
 
-                //v.__defineGetter__(i, d.get);
+                    Object.defineProperty(o, i, {
+                        get : function() {
+                            return _get ? _get.call(self, value, name) : value;
+                        },
+                        set : function(nv) {
+                            var old = value;
 
-                v.__defineSetter__(i, d.set);
+                            value = _set ? _set.call(this, nv, name) : nv;
+
+                            self._emit({
+                                name   : name,
+                                newVal : nv,
+                                oldVal : old,
+                                target : self
+                            });
+
+                            re.call(self, value, name);
+
+                            return value;
+                        }
+                    });
+
+                    o[i] = value;
+                })();
             }
-            //console.log('1');
-            /*var descriptor = Object.getOwnPropertyDescriptor(o, name);
-            var i;
-
-            console.log(name);
-
-            for(i in value) {
-                re.call(value, i);
-            }*/
         }
+
+        return this;
     };
 
     /**
@@ -202,40 +193,21 @@
         return listener;
     };
 
+    Base.prototype._emit = function(e) {
+        var listeners = this._listeners[e.name];
+
+        if (listeners) {
+            listeners.forEach(function(ltr){
+                ltr.cb.call(ltr.ctx || this, e);
+            }, this);
+        }
+    };
+
     Base.prototype.detach = function(listener){
         //todo - implement
     };
 
     /*** ----------------------------------- ***/
-
-    /*var Widget = Base.extend('widget', Base, {
-        initializer : function(){
-            console.log(arguments, this.node);
-        },
-        render : function(node) {
-
-        }
-    }, {
-        ATTRS : {
-            node : null,
-            sec  : {
-                value : 1
-            }
-        }
-    });
-
-    var w = new Widget({
-        node : document.getElementById('test')
-    });
-
-    w.on('secChange', function(e){
-        this.node.innerText = e.newVal;
-    });
-
-    //console.log(w);
-    setInterval(function(){
-        w.sec = (new Date).getSeconds();
-    }, 1000);*/
 
     var A = Base.extend('A', Base, null, {
         ATTRS : {
@@ -245,21 +217,38 @@
 
     var a = new A({
         b : {
-            c : 1
+            c : {
+                d : 1
+            }
         }
     });
 
-    a.listen('v', function(e){
-        //console.log(e.oldVal, e.newVal);
+    a.listen('b', function(e){
+        console.log('B :', e, e.newVal, e.oldVal);
     });
 
-    //console.log(a.v.a);
+    a.listen('b.c', function(e) {
+        console.log('B.C :', e, e.newVal, e.oldVal);
+    });
 
-    a.b.c = 1001;
+    a.listen('b.c.d', function(e) {
+        console.log('B.C.D :', e, e.newVal, e.oldVal);
+    });
 
-    /*a.v = {b : 2};
+    a.listen('b.c.e', function(e) {
+        console.log('B.C.E :', e, e.newVal, e.oldVal);
+    });
 
-    a.v.b = 3;*/
+    console.log(a.b.c.d);
+
+    a.b.c.d++;
+
+    a.b.c = {
+        e : 1
+    };
+
+    a.b.c.e += 100;
+
 </script>
 </body>
 </html>
