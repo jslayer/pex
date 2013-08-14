@@ -108,8 +108,11 @@
 
                 this._emit({
                     name   : name,
-                    newVal : nv,
-                    oldVal : old,
+                    type   : 'change',
+                    data   : {
+                        newVal : nv,
+                        oldVal : old
+                    },
                     target : this
                 });
 
@@ -137,35 +140,117 @@
             var i;
             var self = this;
 
-            for(i in o) {
-                (function() {
-                    var value = o[i];
-                    var name = [pName, i].join('.');
+            switch(Object.prototype.toString.call(o)) {
+                case '[object Object]':
+                    for(i in o) {
+                        (function() {
+                            var value = o[i];
+                            var name = [pName, i].join('.');
 
-                    Object.defineProperty(o, i, {
-                        get : function() {
-                            return _get ? _get.call(self, value, name) : value;
-                        },
-                        set : function(nv) {
-                            var old = value;
+                            Object.defineProperty(o, i, {
+                                get : function() {
+                                    return _get ? _get.call(self, value, name) : value;
+                                },
+                                set : function(nv) {
+                                    var old = value;
 
-                            value = _set ? _set.call(this, nv, name) : nv;
+                                    value = _set ? _set.call(this, nv, name) : nv;
 
-                            self._emit({
-                                name   : name,
-                                newVal : nv,
-                                oldVal : old,
-                                target : self
+                                    self._emit({
+                                        name   : name,
+                                        type   : 'change',
+                                        data   : {
+                                            newVal : nv,
+                                            oldVal : old
+                                        },
+                                        target : self
+                                    });
+
+                                    re.call(self, value, name);
+
+                                    return value;
+                                }
                             });
 
-                            re.call(self, value, name);
+                            o[i] = value;
+                        })();
+                    }
+                    break;
+                case '[object Array]':
+                    o.pop = function() {
+                        var out;
 
-                            return value;
-                        }
-                    });
+                        out = Array.prototype.pop.apply(this, arguments);
 
-                    o[i] = value;
-                })();
+                        self._emit({
+                            name   : pName,
+                            type   : 'pop',
+                            data   : {
+                                newVal : this
+                            },
+                            target : self
+                        });
+
+                        rea(self, o, pName);
+
+                        return out;
+                    };
+
+                    o.push = function() {
+                        var out;
+
+                        out = Array.prototype.push.apply(this, arguments);
+
+                        self._emit({
+                            name   : pName,
+                            type   : 'push',
+                            data   : {
+                                newVal : Array.prototype.slice.call(this, 0)
+                            },
+                            target : self
+                        });
+
+                        rea(self, o, pName);
+
+                        return out;
+                    };
+
+                    o.reverse = function() {
+                        //todo - implement
+                        return Array.prototype.reverse.apply(this, arguments);
+                    };
+
+                    o.shift = function() {
+                        //todo - implement
+                        return Array.prototype.shift.apply(this, arguments);
+                    };
+
+                    o.sort = function() {
+                        //todo - implement
+                        return Array.prototype.sort.apply(this, arguments);
+                    };
+
+                    o.splice = function() {
+                        //todo - implement
+                        return Array.prototype.splice.apply(this, arguments);
+                    };
+
+                    o.unshift = function() {
+                        //todo - implement
+                        return Array.prototype.unshift.apply(this, arguments);
+                    };
+
+                    rea(self, o, pName);
+
+                    break;
+            }
+        }
+
+        function rea(self, o, pName){
+            var l, i;
+
+            for (i = 0, l = o.length; i < l; i++) {
+                re.call(self, o[i], [pName, i].join('.'));
             }
         }
 
@@ -194,6 +279,9 @@
     };
 
     Base.prototype._emit = function(e) {
+        if (e.type === 'change' && e.data.newVal === e.data.oldVal) {
+            return;
+        }
         var listeners = this._listeners[e.name];
 
         if (listeners) {
@@ -211,32 +299,54 @@
 
     var A = Base.extend('A', Base, null, {
         ATTRS : {
-            b : null
-        }
-    });
-
-    var a = new A({
-        b : {
-            c : {
-                d : 1
+            users : {
+                value : []
             }
         }
     });
 
-    a.listen('b', function(e){
-        console.log('B :', e, e.newVal, e.oldVal);
+    var a = new A();
+
+    a.listen('users', function(e) {
+      console.log('users', e.type, e.data);
+    });
+
+    a.listen('users.0.name', function(e) {
+        console.log('users.0.name', e.type, e.data);
+    });
+
+    a.listen('users.1.name', function(e) {
+        console.log('users.1.name', e.type, e.data);
+    });
+
+    a.users.push({
+        id : 1,
+        name : 'admin'
+    });
+
+    a.users.push({
+        id : 2,
+        name : 'user'
+    });
+
+    a.users[0].name = 'SuperAdmin';
+
+    a.users[1].name = 'DefaultUser';
+
+    /*a.listen('b', function(e){
+        console.log('B :', e.data);
     });
 
     a.listen('b.c', function(e) {
-        console.log('B.C :', e, e.newVal, e.oldVal);
+        console.log('B.C :', e.data);
     });
 
     a.listen('b.c.d', function(e) {
-        console.log('B.C.D :', e, e.newVal, e.oldVal);
+        console.log('B.C.D :', e.data);
     });
 
     a.listen('b.c.e', function(e) {
-        console.log('B.C.E :', e, e.newVal, e.oldVal);
+        console.log('B.C.E :', e.data);
     });
 
     console.log(a.b.c.d);
@@ -248,6 +358,18 @@
     };
 
     a.b.c.e += 100;
+
+    a.listen('list', function(e){
+        console.log('LIST', e.data.newVal);
+    });
+
+    console.log(a.list);
+
+    a.list.push('NEW');
+
+    a.list.pop();
+
+    a.list = [2,3];*/
 
 </script>
 </body>
