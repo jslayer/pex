@@ -101,7 +101,7 @@
         var value, _set, _get;
 
         Object.defineProperty(this, name, {
-            set : function(nv) {
+            set : function(nv){
                 var old = value;
 
                 value = _set ? _set.call(this, nv, name) : nv;
@@ -120,7 +120,7 @@
 
                 return value;
             },
-            get : function() {
+            get : function(){
                 return _get ? _get.call(this, value, name) : value;
             }
         });
@@ -136,22 +136,22 @@
             }
         }
 
-        function re(o, pName) {
+        function re(o, pName){
             var i;
             var self = this;
 
-            switch(Object.prototype.toString.call(o)) {
+            switch (Object.prototype.toString.call(o)) {
                 case '[object Object]':
-                    for(i in o) {
-                        (function() {
+                    for (i in o) {
+                        (function(){
                             var value = o[i];
                             var name = [pName, i].join('.');
 
                             Object.defineProperty(o, i, {
-                                get : function() {
+                                get : function(){
                                     return _get ? _get.call(self, value, name) : value;
                                 },
-                                set : function(nv) {
+                                set : function(nv){
                                     var old = value;
 
                                     value = _set ? _set.call(this, nv, name) : nv;
@@ -177,7 +177,7 @@
                     }
                     break;
                 case '[object Array]':
-                    o.pop = function() {
+                    o.pop = function(){
                         var out;
 
                         out = Array.prototype.pop.apply(this, arguments);
@@ -196,7 +196,7 @@
                         return out;
                     };
 
-                    o.push = function() {
+                    o.push = function(){
                         var out;
 
                         out = Array.prototype.push.apply(this, arguments);
@@ -215,27 +215,27 @@
                         return out;
                     };
 
-                    o.reverse = function() {
+                    o.reverse = function(){
                         //todo - implement
                         return Array.prototype.reverse.apply(this, arguments);
                     };
 
-                    o.shift = function() {
+                    o.shift = function(){
                         //todo - implement
                         return Array.prototype.shift.apply(this, arguments);
                     };
 
-                    o.sort = function() {
+                    o.sort = function(){
                         //todo - implement
                         return Array.prototype.sort.apply(this, arguments);
                     };
 
-                    o.splice = function() {
+                    o.splice = function(){
                         //todo - implement
                         return Array.prototype.splice.apply(this, arguments);
                     };
 
-                    o.unshift = function() {
+                    o.unshift = function(){
                         //todo - implement
                         return Array.prototype.unshift.apply(this, arguments);
                     };
@@ -278,7 +278,7 @@
         return listener;
     };
 
-    Base.prototype._emit = function(e) {
+    Base.prototype._emit = function(e){
         if (e.type === 'change' && e.data.newVal === e.data.oldVal) {
             return;
         }
@@ -301,31 +301,44 @@
         ATTRS : {
             users : {
                 value : []
+            },
+            a     : {
+                value : {
+                    b : {
+                        c : {
+                            d : 30000
+                        }
+                    }
+                }
             }
         }
     });
 
     var a = new A();
 
-    a.listen('users', function(e) {
-      console.log('users', e.type, e.data);
+    a.listen('users', function(e){
+        console.log('users', e.type, e.data);
     });
 
-    a.listen('users.0.name', function(e) {
+    a.listen('users.0.name', function(e){
         console.log('users.0.name', e.type, e.data);
     });
 
-    a.listen('users.1.name', function(e) {
+    a.listen('users.1.name', function(e){
         console.log('users.1.name', e.type, e.data);
     });
 
+    a.listen('a.b.c.d', function(e){
+        console.log('a.b.c.d', e.type, e.data);
+    });
+
     a.users.push({
-        id : 1,
+        id   : 1,
         name : 'admin'
     });
 
     a.users.push({
-        id : 2,
+        id   : 2,
         name : 'user'
     });
 
@@ -333,43 +346,45 @@
 
     a.users[1].name = 'DefaultUser';
 
+    a.a.b.c.d = 10;
+
     /*a.listen('b', function(e){
-        console.log('B :', e.data);
-    });
+     console.log('B :', e.data);
+     });
 
-    a.listen('b.c', function(e) {
-        console.log('B.C :', e.data);
-    });
+     a.listen('b.c', function(e) {
+     console.log('B.C :', e.data);
+     });
 
-    a.listen('b.c.d', function(e) {
-        console.log('B.C.D :', e.data);
-    });
+     a.listen('b.c.d', function(e) {
+     console.log('B.C.D :', e.data);
+     });
 
-    a.listen('b.c.e', function(e) {
-        console.log('B.C.E :', e.data);
-    });
+     a.listen('b.c.e', function(e) {
+     console.log('B.C.E :', e.data);
+     });
 
-    console.log(a.b.c.d);
+     console.log(a.b.c.d);
 
-    a.b.c.d++;
+     a.b.c.d++;
 
-    a.b.c = {
-        e : 1
-    };
+     a.b.c = {
+     e : 1
+     };
 
-    a.b.c.e += 100;
+     a.b.c.e += 100;
 
-    a.listen('list', function(e){
-        console.log('LIST', e.data.newVal);
-    });
+     a.listen('list', function(e){
+     console.log('LIST', e.data.newVal);
+     });
 
-    console.log(a.list);
+     console.log(a.list);
 
-    a.list.push('NEW');
+     a.list.push('NEW');
 
-    a.list.pop();
+     a.list.pop();
 
-    a.list = [2,3];*/
+     a.list = [2,3];*/
 
 </script>
 </body>
