@@ -332,6 +332,14 @@
         console.log('a.b.c.d', e.type, e.data);
     });
 
+    a.listen('a.b.c', function(e) {
+        console.log('a.b.c', e.type, e.data);
+    });
+
+    a.listen('a', function(e) {
+        console.log('a', e.type, e.data);
+    });
+
     a.users.push({
         id   : 1,
         name : 'admin'
@@ -347,6 +355,10 @@
     a.users[1].name = 'DefaultUser';
 
     a.a.b.c.d = 10;
+
+    a.a.b.c = { t : 1 }
+
+    a.a = 22;
 
 </script>
 </body>
