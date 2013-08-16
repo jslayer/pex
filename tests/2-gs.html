@@ -5,7 +5,11 @@
     <title></title>
 </head>
 <body>
-<div id="test">--</div>
+<div id="test">
+    <ul a2-for="user, i in users">
+        <li>{{ i }} : {{ user.id }} : <b>{{ user.name }}</b></li>
+    </ul>
+</div>
 <script>
     /**
      * @param {Object?} cfg
@@ -106,7 +110,7 @@
 
                 value = _set ? _set.call(this, nv, name) : nv;
 
-                this._emit({
+                this.emit({
                     name   : name,
                     type   : 'change',
                     data   : {
@@ -156,7 +160,7 @@
 
                                     value = _set ? _set.call(this, nv, name) : nv;
 
-                                    self._emit({
+                                    self.emit({
                                         name   : name,
                                         type   : 'change',
                                         data   : {
@@ -182,7 +186,7 @@
 
                         out = Array.prototype.pop.apply(this, arguments);
 
-                        self._emit({
+                        self.emit({
                             name   : pName,
                             type   : 'pop',
                             data   : {
@@ -201,7 +205,7 @@
 
                         out = Array.prototype.push.apply(this, arguments);
 
-                        self._emit({
+                        self.emit({
                             name   : pName,
                             type   : 'push',
                             data   : {
@@ -278,7 +282,7 @@
         return listener;
     };
 
-    Base.prototype._emit = function(e){
+    Base.prototype.emit = function(e){
         if (e.type === 'change' && e.data.newVal === e.data.oldVal) {
             return;
         }
@@ -297,7 +301,67 @@
 
     /*** ----------------------------------- ***/
 
-    var A = Base.extend('A', Base, null, {
+    var A2 = Base.extend('A2', Base, {
+        initializer : function(){
+            //console.log(this, arguments, this.node);
+
+            console.log(
+                this.parse(this.node)
+            );
+        },
+
+        parse : function(node, parent){
+            var i, l, tree, child, children, go;
+
+            tree = {
+                node   : node,
+                parent : parent || false
+            };
+
+            //div  ? // collection info from plugins
+
+            children = node.childNodes;
+
+            if (children && children.length > 0) {
+                tree.children = [];
+
+                for (i = 0, l = children.length; i < l; i++) {
+                    child = children[i];
+
+                    go = false;
+
+                    switch (child.nodeType) {
+                        case 1://Element Node
+                            go = true;
+                            break;
+                        case 3://Text Node
+                            if (child.textContent.trim().length > 0) {
+                                go = true;
+                            }
+                            break;
+                    }
+
+                    if (go) {
+                        tree.children.push(
+                            this.parse(child, tree)
+                        );
+                    }
+                }
+            }
+
+            return tree;
+        }
+    }, {
+        ATTRS : {
+            node : null
+        }
+    });
+
+    var a2 = new A2({
+        node : document.getElementById('test')
+    });
+
+    /*var A = Base.extend('A', Base, null, {
         ATTRS : {
             users : {
                 value : []
@@ -358,7 +422,7 @@
 
     a.a.b.c = { t : 1 }
 
-    a.a = 22;
+    a.a = 22;*/
 
 </script>
 </body>
