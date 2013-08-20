@@ -6,11 +6,23 @@
 </head>
 <body>
 <div id="test">
+    <h1>{{ title }}</h1>
+
+    <p>{{ users }}</p>
+
+    <input type="text" a2-model="title" />
+    <input type="text" a2-model="title" />
+
+    <input type="text" a2-enter="onEnterHandler" />
+
     <ul a2-for="user, i in users">
         <li>{{ i }} : {{ user.id }} : <b>{{ user.name }}</b></li>
     </ul>
 </div>
 <script>
+    var Plugins = {},
+        A2, a2;
+
     /**
      * @param {Object?} cfg
      * @constructor
@@ -53,6 +65,12 @@
             this._define(i, _attrs[i]);
         }
 
+        for (i = 0, l = this._exs.length; i < l; i++) {
+            this._exs[i].apply(this, arguments);
+        }
+
+        this._plugins = [];
+
         //call initializer of each chain item
         this._chain.map(function(o){
             if (o.initializer) {
@@ -63,13 +81,13 @@
 
     /**
      * @param {string} name
-     * @param {Base} P
+     * @param {Function} P
      * @param {Object?} px
      * @param {Object?} sx
      * @returns {Function}
      */
-    Base.extend = function(name, P, px, sx){
-        var C, F, i;
+    Base.extend = function(name, P, ex, px, sx){
+        var C, F, i, l, ii;
 
         F = function(){
         };
@@ -85,15 +103,68 @@
             C[i] = sx[i];
         }
 
+        C.prototype._exs = ex;
+
+        //extend the prototype with method from extensions
+        for (i = 0, l = ex.length; i < l; i++) {
+            for (ii in ex[i].prototype) {
+                if (ex[i].prototype.hasOwnProperty(ii)) {
+                    C.prototype[ii] = ex[i].prototype[ii];
+                }
+            }
+        }
+
         for (i in px) {
             C.prototype[i] = px[i];
         }
 
         C.__super__ = P.prototype;
         C.prototype.constructor = C;
-        C.prototype.name = name;
+        C.NAME = name;
 
         return C;
+    };
+
+    /**
+     * @type {{on: Function, off: Function}}
+     */
+    Base.Node = {
+        /**
+         * @param node
+         * @param type
+         * @param fn
+         * @param capture
+         * @returns {*}
+         */
+        on  : function(node, type, fn, capture){
+            var i, l, types;
+
+            types = type.split(' ');
+
+            for (i = 0, l = types.length; i < l; i++) {
+                node.addEventListener(types[i], fn, capture || false);
+            }
+
+            return this;
+        },
+        /**
+         * @param node
+         * @param type
+         * @param fn
+         * @param capture
+         * @returns {*}
+         */
+        off : function(node, type, fn, capture){
+            var i, l, types;
+
+            types = type.split(' ');
+
+            for (i = 0, l = types; i < l; i++) {
+                node.removeEventListener(types[i], fn, capture || false);
+            }
+
+            return this;
+        }
     };
 
     /**
@@ -301,28 +372,65 @@
 
     /*** ----------------------------------- ***/
 
-    var A2 = Base.extend('A2', Base, {
-        initializer : function(){
-            //console.log(this, arguments, this.node);
+    /**
+     * Plugin extension
+     * @constructor
+     */
+    function Plugin(){
+        //console.log('PLUGIN EXTENSION');
+    }
 
-            console.log(
+    Plugin.prototype.plug = function(C){
+        this._plugins.push(C.NAME);
+
+        this[C.NAME] = new C(this, arguments[1]);
+    };
+
+    A2 = Base.extend('A2', Base, [Plugin], {
+        initializer : function(){
+
+        },
+
+        init : function(){
+            this.processTree(
                 this.parse(this.node)
             );
         },
 
+        processTree : function(tree){
+            var i;
+
+            if (tree.cfg) {
+                for (i in tree.cfg) {
+                    this[i].process(tree, tree.cfg[i]);
+                }
+            }
+
+            if (tree.children) {
+                for (i in tree.children) {
+                    this.processTree(tree.children[i]);
+                }
+            }
+
+        },
+
         parse : function(node, parent){
-            var i, l, tree, child, children, go;
+            var i, l, tree, child, children, go, notDive;
 
             tree = {
                 node   : node,
                 parent : parent || false
             };
 
-            //div  ? // collection info from plugins
+            notDive = this._plugins.some(function(name){
+                var plugin = this[name];
+
+                return plugin && plugin.validate ? plugin.validate(tree) : false;
+            }, this);
 
             children = node.childNodes;
 
-            if (children && children.length > 0) {
+            if (!notDive && children && children.length > 0) {
                 tree.children = [];
 
                 for (i = 0, l = children.length; i < l; i++) {
@@ -350,80 +458,232 @@
             }
 
             return tree;
+        },
+
+        /**
+         * @param tree
+         * @param plugin
+         * @param data
+         */
+        setConfig : function(tree, plugin, data){
+            if (!tree.cfg) {
+                tree.cfg = {};
+            }
+
+            tree.cfg[plugin.constructor.NAME] = data;
+        },
+
+        /**
+         * @param tree
+         * @param plugin
+         * @returns {boolean}
+         */
+        getConfig : function(tree, plugin){
+            var result = false;
+
+            if (tree.cfg && tree.cfg[plugin.constructor.NAME]) {
+                result = tree.cfg[plugin.constructor.NAME];
+            }
+
+            return result;
         }
     }, {
-        ATTRS : {
+        ATTRS  : {
             node : null
-        }
+        },
+        PREFIX : 'a2'
     });
 
-    var a2 = new A2({
+    a2 = new A2({
         node : document.getElementById('test')
     });
 
-    /*var A = Base.extend('A', Base, null, {
-        ATTRS : {
-            users : {
-                value : []
-            },
-            a     : {
-                value : {
-                    b : {
-                        c : {
-                            d : 30000
+    function PluginBase(){
+        this.host = arguments[0];
+
+        if (this.initializer) {
+            this.initializer.apply(this, arguments);
+        }
+    }
+
+    Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
+        validate : function(tree){
+            var result = false,
+                node = tree.node,
+                attrValue = node.getAttribute && node.getAttribute([
+                    this.host.constructor.PREFIX,
+                    this.constructor.SUFFIX
+                ].join('-'));
+
+            if (attrValue) {
+                this._pre(tree, attrValue);
+                result = true;
+            }
+
+            return result;
+        },
+
+        _pre : function(tree, value){
+            //>   user, i in users    <
+            //> single[, key] in list <
+            var parts = value.match(/(\w+)\s*(?:,\s*(.))?\s+in\s+(\w+)/).slice(1);
+
+            this.host.setConfig(tree, this, {
+                parts : {
+                    name  : parts[0],
+                    key   : parts[1],
+                    model : parts[2]
+                },
+                tpl   : Array.prototype.splice.call(tree.node.childNodes, 0)
+            });
+
+            tree.node.innerHTML = '';
+        },
+
+        process : function(tree, cfg){
+            //console.log('PPPP');
+            //todo - implement
+            console.log(cfg);
+        },
+        generate : function() {
+
+        }
+    }, {
+        SUFFIX : 'for'
+    });
+
+    Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
+        validate : function(tree){
+            var i, ii, ll, child, texts, frag, match;
+
+            switch (tree.node.nodeType) {
+                case 1://Node
+                    /**
+                     * Go through the child & split texts into parts
+                     */
+
+                    for (i = tree.node.childNodes.length - 1; i >= 0; i--) {
+                        child = tree.node.childNodes[i];
+
+                        if (child.nodeType === 3) {
+
+                            frag = document.createDocumentFragment();
+
+                            texts = child.textContent.split(/({{\s*\w+\s*}})/g);
+                            for(ii=0, ll = texts.length; ii < ll; ii++) {
+                                if (texts[ii].trim().length) {
+                                    frag.appendChild(document.createTextNode(texts[ii]));
+                                }
+                            }
+
+                            tree.node.replaceChild(frag, child);
                         }
                     }
-                }
+                    break;
+                case 3:
+                    match = tree.node.textContent.match(/{{\s*([a-z.-9]+)\s*}}/);//todo - change
+
+                    if (match && match.length === 2) {
+                        this.host.setConfig(tree, this, match[1]);
+
+                        tree.node.textContent = '';
+                    }
+                    break;
             }
+        },
+        process  : function(tree, modelName){
+            if (!(modelName in this.host)) {
+                this.host._define(modelName)
+            }
+
+            this.host.listen(modelName, function(e){
+                tree.node.textContent = e.data.newVal;
+            });
         }
     });
 
-    var a = new A();
+    Plugins.PluginNodeInput = Base.extend('PluginNodeInput', PluginBase, [], {
+        validate : function(tree){
+            if (tree.node.tagName === 'INPUT') {
+                var model = tree.node.getAttribute([
+                    this.host.constructor.PREFIX,
+                    this.constructor.SUFFIX
+                ].join('-'));
 
-    a.listen('users', function(e){
-        console.log('users', e.type, e.data);
+                if (model) {
+                    this.host.setConfig(tree, this, model);
+                }
+            }
+        },
+
+        process : function(tree, modelName){
+            if (!(modelName in this.host)) {
+                this.host._define(modelName)
+            }
+
+            var host = this.host;
+
+            Base.Node.on(tree.node, 'keyup input', function(e){
+                host[modelName] = e.target.value;
+            });
+
+            this.host.listen(modelName, function(e){
+                tree.node.value = e.data.newVal;
+            });
+        }
+    }, {
+        SUFFIX : 'model'
     });
 
-    a.listen('users.0.name', function(e){
-        console.log('users.0.name', e.type, e.data);
+    Plugins.PluginNodeEnter = Base.extend('PluginNodeEnter', PluginBase, [], {
+        validate : function(tree) {
+            if (tree.node.nodeType === 1) {
+                var enter = tree.node.getAttribute([
+                    this.host.constructor.PREFIX,
+                    this.constructor.SUFFIX
+                ].join('-'));
+
+                if (enter) {
+                    this.host.setConfig(tree, this, enter);
+                }
+            }
+        },
+        process : function(tree, enter) {
+            var host = this.host;
+
+            Base.Node.on(tree.node, 'keydown', function(e) {
+                if (e.which === 13) {
+                    if (typeof host[enter] === 'function') {
+                        host[enter](tree);
+                    }
+                }
+            });
+
+        }
+    }, {
+        SUFFIX : 'enter'
     });
 
-    a.listen('users.1.name', function(e){
-        console.log('users.1.name', e.type, e.data);
-    });
+    a2.plug(Plugins.PluginNodeForIn);
+    a2.plug(Plugins.PluginNodeText);
+    a2.plug(Plugins.PluginNodeInput);
+    a2.plug(Plugins.PluginNodeEnter);
 
-    a.listen('a.b.c.d', function(e){
-        console.log('a.b.c.d', e.type, e.data);
-    });
+    a2.onEnterHandler = function(tree) {
+        var value = tree.node.value;
 
-    a.listen('a.b.c', function(e) {
-        console.log('a.b.c', e.type, e.data);
-    });
+        if (value) {
+            if (!this.users) {
+                this.users = [];
+            }
 
-    a.listen('a', function(e) {
-        console.log('a', e.type, e.data);
-    });
+            this.users.push(value);
 
-    a.users.push({
-        id   : 1,
-        name : 'admin'
-    });
+            tree.node.value = '';
+        }
+    };
 
-    a.users.push({
-        id   : 2,
-        name : 'user'
-    });
-
-    a.users[0].name = 'SuperAdmin';
-
-    a.users[1].name = 'DefaultUser';
-
-    a.a.b.c.d = 10;
-
-    a.a.b.c = { t : 1 }
-
-    a.a = 22;*/
-
+    a2.init();
 </script>
 </body>
 </html>
