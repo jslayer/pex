@@ -15,9 +15,15 @@
 
     <input type="text" a2-enter="onEnterHandler" />
 
-    <ul a2-for="user, i in users">
-        <li>{{ i }} : {{ user.id }} : <b>{{ user.name }}</b></li>
+    <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
+        <li>{{ i }} : <b>{{ user }}</b> <input type="text" a2-model="user" /></li>
     </ul>
+
+    <div a2-for="user in users" style="padding: 10px; border: 1px solid blue;">
+        <div>{{ $index }} : <b>{{ user }}</b></div>
+        <input type="text" a2-model="user" />
+        <hr>
+    </div>
 </div>
 <script>
     var Plugins = {},
@@ -212,7 +218,7 @@
         }
 
         function re(o, pName){
-            var i,
+            var i, l,
                 self = this;
 
             switch (Object.prototype.toString.call(o)) {
@@ -326,6 +332,36 @@
 
             for (i = 0, l = o.length; i < l; i++) {
                 re.call(self, o[i], [pName, i].join('.'));
+
+                (function(){
+                    var value = o[i],
+                        name = [pName, i].join('.');
+
+                    Object.defineProperty(o, i, {
+                        get : function(){
+                            return _get ? _get.call(self, value, name) : value;
+                        },
+                        set : function(nv){
+                            var old = value;
+
+                            value = _set ? _set.call(this, nv, name) : nv;
+
+                            self.emit({
+                                name   : name,
+                                type   : 'change',
+                                data   : {
+                                    newVal : nv,
+                                    oldVal : old
+                                },
+                                target : self
+                            });
+
+                            //re.call(self, value, name);
+
+                            return value;
+                        }
+                    });
+                })();
             }
         }
 
@@ -486,6 +522,54 @@
             }
 
             return result;
+        },
+
+        resolveValue : function(name, tree){
+            var value, tmp = tree;
+
+            while (tmp.parent) {
+                if (tmp.closure && typeof tmp.closure[name] !== 'undefined') {
+                    value = tmp.closure[name];
+                    break;
+                }
+                tmp = tmp.parent;
+            }
+
+            if (typeof value === 'undefined' && this[name]) {
+                value = this[name];
+            }
+
+            return value;
+        },
+
+        resolveModelName : function(name, tree){
+            var tmp = tree;
+
+            while (tmp.parent) {
+                if (tmp.closure && typeof tmp.closure[name] !== 'undefined') {
+                    if (typeof tmp.closure['$index'] != 'undefined' && typeof tmp.closure['$model'] != 'undefined') {
+                        name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                    }
+                    break;
+                }
+                tmp = tmp.parent;
+            }
+
+            return name;
+        },
+
+        setValue : function(name, value){
+            var i, l, parts = name.split('.'), link = this, key;
+
+            var key = parts.pop();
+
+            for (i = 0, l = parts.length; i < l; i++) {
+                if (typeof link[parts[i]] != 'undefined') {
+                    link = link[parts[i]];
+                }
+            }
+
+            link[key] = value;
         }
     }, {
         ATTRS  : {
@@ -495,7 +579,9 @@
     });
 
     a2 = new A2({
-        node : document.getElementById('test')
+        node  : document.getElementById('test'),
+        users : ['default', 'admin'],
+        title : 111
     });
 
     function PluginBase(){
@@ -524,29 +610,104 @@
         },
 
         _pre : function(tree, value){
-            //>   user, i in users    <
-            //> single[, key] in list <
-            var parts = value.match(/(\w+)\s*(?:,\s*(.))?\s+in\s+(\w+)/).slice(1);
+            var parts, rawTpl, tpl = [], i, l;
+
+            parts = value.match(/(\w+)\s*(?:,\s*(.))?\s+in\s+(\w+)/).slice(1);
+
+            rawTpl = Array.prototype.splice.call(tree.node.childNodes, 0);
+
+            for (i = 0, l = rawTpl.length; i < l; i++) {
+                if (rawTpl[i].nodeType !== 3 || (rawTpl[i].nodeType === 1 && rawTpl[i].textContent.trim().length > 0)) {
+                    tpl.push(rawTpl[i]);
+                }
+            }
 
             this.host.setConfig(tree, this, {
-                parts : {
-                    name  : parts[0],
-                    key   : parts[1],
-                    model : parts[2]
-                },
-                tpl   : Array.prototype.splice.call(tree.node.childNodes, 0)
+                name  : parts[0],
+                key   : parts[1],
+                model : parts[2],
+                tpl   : tpl
             });
 
             tree.node.innerHTML = '';
         },
 
-        process : function(tree, cfg){
-            //console.log('PPPP');
-            //todo - implement
-            console.log(cfg);
-        },
-        generate : function() {
+        process       : function(tree, cfg){
+            var self = this;
 
+            if (!(cfg.model in this.host)) {
+                //todo - blablabla
+                this.host._define(cfg.model);
+            }
+            else {
+                this.generate(tree, cfg);
+            }
+
+            this.host.listen(this.host.resolveModelName(cfg.model, tree), function(e){
+                var value, item;
+
+                switch (e.type) {
+                    case 'change':
+                        this.generate(tree, cfg);
+                        break;
+                    case 'push':
+                        value = e.data.newVal[e.data.newVal.length - 1];
+
+                        item = this._parseElement(tree, cfg, value, e.data.newVal.length - 1);
+
+                        tree.node.appendChild(item.node);
+                        break;
+                }
+            }, this);
+        },
+        generate      : function(tree, cfg){
+            var i, l, frag, list = this.host[cfg.model];
+
+            tree.children = [];
+
+            for (i = 0, l = list.length; i < l; i++) {
+                tree.children.push(
+                    this._parseElement(tree, cfg, list[i], i)
+                );
+            }
+
+            frag = document.createDocumentFragment();
+
+            for (i = 0, l = tree.children.length; i < l; i++) {
+                frag.appendChild(tree.children[i].node);
+            }
+
+            tree.node.appendChild(frag);
+        },
+        _parseElement : function(tree, cfg, value, index){
+            var i, l,
+                frag,
+                item,
+                closure = {};
+
+            if (cfg.key) {
+                closure[cfg.key] = index;
+            }
+            closure['$index'] = index;
+            closure['$model'] = cfg.model;
+            closure[cfg.name] = value;
+
+            frag = document.createDocumentFragment();
+
+            for (i = 0, l = cfg.tpl.length; i < l; i++) {
+                frag.appendChild(
+                    cfg.tpl[i].cloneNode(true)
+                );
+            }
+
+            item = this.host.parse(frag);
+
+            item.closure = closure;
+            item.parent = tree;
+
+            this.host.processTree(item);
+
+            return item;
         }
     }, {
         SUFFIX : 'for'
@@ -566,11 +727,11 @@
                         child = tree.node.childNodes[i];
 
                         if (child.nodeType === 3) {
-
                             frag = document.createDocumentFragment();
 
-                            texts = child.textContent.split(/({{\s*\w+\s*}})/g);
-                            for(ii=0, ll = texts.length; ii < ll; ii++) {
+                            texts = child.textContent.split(/({{\s*[a-z.0-9$]+\s*}})/g);
+
+                            for (ii = 0, ll = texts.length; ii < ll; ii++) {
                                 if (texts[ii].trim().length) {
                                     frag.appendChild(document.createTextNode(texts[ii]));
                                 }
@@ -581,10 +742,10 @@
                     }
                     break;
                 case 3:
-                    match = tree.node.textContent.match(/{{\s*([a-z.-9]+)\s*}}/);//todo - change
+                    match = tree.node.textContent.match(/{{\s*([a-z.0-9$]+)\s*}}/);//todo - change
 
                     if (match && match.length === 2) {
-                        this.host.setConfig(tree, this, match[1]);
+                        this.host.setConfig(tree, this, this.host.resolveModelName(match[1], tree));
 
                         tree.node.textContent = '';
                     }
@@ -592,12 +753,17 @@
             }
         },
         process  : function(tree, modelName){
-            if (!(modelName in this.host)) {
-                this.host._define(modelName)
+            var host = this.host;
+
+            if (typeof host.resolveValue(modelName, tree) === 'undefined') {
+                host._define(modelName)
+            }
+            else {
+                tree.node.textContent = host.resolveValue(modelName, tree);
             }
 
-            this.host.listen(modelName, function(e){
-                tree.node.textContent = e.data.newVal;
+            host.listen(host.resolveModelName(modelName, tree), function(e){
+                tree.node.textContent = host.resolveValue(modelName, tree);
             });
         }
     });
@@ -611,23 +777,26 @@
                 ].join('-'));
 
                 if (model) {
-                    this.host.setConfig(tree, this, model);
+                    this.host.setConfig(tree, this, this.host.resolveModelName(model, tree));
                 }
             }
         },
 
         process : function(tree, modelName){
-            if (!(modelName in this.host)) {
-                this.host._define(modelName)
-            }
-
             var host = this.host;
 
+            if (typeof host.resolveValue(modelName, tree) === 'undefined') {
+                host._define(modelName);
+            }
+            else {
+                tree.node.value = host.resolveValue(modelName, tree);
+            }
+
             Base.Node.on(tree.node, 'keyup input', function(e){
-                host[modelName] = e.target.value;
+                host.setValue(host.resolveModelName(modelName, tree), e.target.value);
             });
 
-            this.host.listen(modelName, function(e){
+            host.listen(host.resolveModelName(modelName, tree), function(e){
                 tree.node.value = e.data.newVal;
             });
         }
@@ -636,7 +805,7 @@
     });
 
     Plugins.PluginNodeEnter = Base.extend('PluginNodeEnter', PluginBase, [], {
-        validate : function(tree) {
+        validate : function(tree){
             if (tree.node.nodeType === 1) {
                 var enter = tree.node.getAttribute([
                     this.host.constructor.PREFIX,
@@ -648,10 +817,10 @@
                 }
             }
         },
-        process : function(tree, enter) {
+        process  : function(tree, enter){
             var host = this.host;
 
-            Base.Node.on(tree.node, 'keydown', function(e) {
+            Base.Node.on(tree.node, 'keydown', function(e){
                 if (e.which === 13) {
                     if (typeof host[enter] === 'function') {
                         host[enter](tree);
@@ -669,10 +838,15 @@
     a2.plug(Plugins.PluginNodeInput);
     a2.plug(Plugins.PluginNodeEnter);
 
-    a2.onEnterHandler = function(tree) {
+    a2.onEnterHandler = function(tree){
         var value = tree.node.value;
 
         if (value) {
+
+            if (!('users' in this)) {
+                this.host._define('users');
+            }
+
             if (!this.users) {
                 this.users = [];
             }
@@ -684,6 +858,11 @@
     };
 
     a2.init();
+
+    //a2.users[1] = 'iii';
+
+
+
 </script>
 </body>
 </html>
