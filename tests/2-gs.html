@@ -18,6 +18,12 @@
     <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
         <li>{{ i }} : <b>{{ user }}</b> <input type="text" a2-model="user" /></li>
     </ul>
+    <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
+        <li>{{ i }} / <i>{{ user }}</i> <input type="text" a2-model="user" /></li>
+    </ul>
+    <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
+        <li>{{ i }} \ <u>{{ user }}</u> <input type="text" a2-model="user" /></li>
+    </ul>
 
     <div a2-for="user in users" style="padding: 10px; border: 1px solid blue;">
         <div>{{ $index }} : <b>{{ user }}</b></div>
