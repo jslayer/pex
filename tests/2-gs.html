@@ -769,7 +769,7 @@
             }
 
             host.listen(host.resolveModelName(modelName, tree), function(e){
-                tree.node.textContent = host.resolveValue(modelName, tree);
+                tree.node.textContent = e.data.newVal;
             });
         }
     });
