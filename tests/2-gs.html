@@ -6,18 +6,20 @@
 </head>
 <body>
 <div id="test">
-    <h1>{{ title }}</h1>
+    <!--<h1>{{ title }}</h1>-->
 
-    <p>{{ users }}</p>
+    <!--<input type="text" a2-model="title" />
+    <input type="text" a2-model="title" />-->
 
-    <input type="text" a2-model="title" />
-    <input type="text" a2-model="title" />
+    <!--<p>{{ users }}</p>-->
 
-    <input type="text" a2-enter="onEnterHandler" />
+    <hr>
+    Name: <input type="text" a2-model="newUserName" a2-enter="onEnterHandler" />
+    Surname: <input type="text" a2-model="newUserSurname" a2-enter="onEnterHandler" />
 
-    <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
+    <!--<ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
         <li>{{ i }} : <b>{{ user }}</b> <input type="text" a2-model="user" /></li>
-    </ul>
+    </ul>-->
     <!--<ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
         <li>{{ i }} / <i>{{ user }}</i> <input type="text" a2-model="user" /></li>
     </ul>
@@ -34,8 +36,10 @@
     <table a2-for="user, i in users">
         <tr>
             <td>{{ i }}</td>
-            <td>{{ user }}</td>
-            <td><input a2-model="user" /></td>
+            <td>{{ user.name }}</td>
+            <td>{{ user.surname }}</td>
+            <td><input a2-model="user.name" /></td>
+            <td><input a2-model="user.surname" /></td>
         </tr>
     </table>
 </div>
@@ -548,7 +552,12 @@
         },
 
         resolveValue : function(name, tree){
-            var value, tmp = tree;
+            var value, tmp = tree, parts, i, l;
+
+            if (~name.indexOf('.')) {
+                parts = name.split('.');
+                name = parts.shift();
+            }
 
             while (tmp.parent) {
                 if (tmp.closure && typeof tmp.closure[name] !== 'undefined') {
@@ -556,6 +565,17 @@
                     break;
                 }
                 tmp = tmp.parent;
+            }
+
+            if (parts) {
+                for (i = 0, l = parts.length; i < l; i++) {
+                    if (typeof value[parts[i]] !== 'undefined') {
+                        value = value[parts[i]];
+                    }
+                    else {
+                        value = '';
+                    }
+                }
             }
 
             if (typeof value === 'undefined' && this[name]) {
@@ -566,7 +586,13 @@
         },
 
         resolveModelName : function(name, tree){
-            var tmp = tree;
+            var tmp = tree, suffix, parts;
+
+            if (~name.indexOf('.')) {
+                parts = name.split('.');
+                name = parts.shift();
+                suffix = parts.join('.');
+            }
 
             while (tmp.parent) {
                 if (tmp.closure && typeof tmp.closure[name] !== 'undefined') {
@@ -581,6 +607,10 @@
                     break;
                 }
                 tmp = tmp.parent;
+            }
+
+            if (suffix) {
+                name = [name, suffix].join('.');
             }
 
             return name;
@@ -708,27 +738,29 @@
         generate      : function(tree, cfg){
             var i, l, frag, list = this.host[cfg.model], target;
 
-            tree.children = [];
+            if (list && list.length) {
+                tree.children = [];
 
-            for (i = 0, l = list.length; i < l; i++) {
-                tree.children.push(
-                    this._parseElement(tree, cfg, list[i], i)
-                );
+                for (i = 0, l = list.length; i < l; i++) {
+                    tree.children.push(
+                        this._parseElement(tree, cfg, list[i], i)
+                    );
+                }
+
+                frag = document.createDocumentFragment();
+
+                for (i = 0, l = tree.children.length; i < l; i++) {
+                    frag.appendChild(tree.children[i].node);
+                }
+
+                target = tree.node;
+
+                if (target.tagName === 'TABLE' && target.tBodies.length > 0) {
+                    target = target.tBodies[0];
+                }
+
+                target.appendChild(frag);
             }
-
-            frag = document.createDocumentFragment();
-
-            for (i = 0, l = tree.children.length; i < l; i++) {
-                frag.appendChild(tree.children[i].node);
-            }
-
-            target = tree.node;
-
-            if (target.tagName === 'TABLE' && target.tBodies.length > 0) {
-                target = target.tBodies[0];
-            }
-
-            target.appendChild(frag);
         },
         _parseElement : function(tree, cfg, value, index){
             var i, l,
@@ -899,7 +931,7 @@
 
     a2 = new A2({
         node  : document.getElementById('test'),
-        users : ['default', 'admin'],
+        //users : [],
         title : 111
     });
 
@@ -909,27 +941,42 @@
     a2.plug(Plugins.PluginNodeEnter);
 
     a2.onEnterHandler = function(tree){
-        var value = tree.node.value;
+        var un = this.newUserName,
+            us = this.newUserSurname;
 
-        if (value) {
+        //console.log(arguments, this.newUserName, this.newUserSurname);
+        if (un && us) {
+            var value = {
+                name    : un,
+                surname : us
+            };
 
-            if (!('users' in this)) {
-                this.host._define('users');
+            if (value) {
+
+                if (!('users' in this)) {
+                    this.host._define('users');
+                }
+
+                if (!this.users) {
+                    this.users = [];
+                }
+
+                this.users.push(value);
+
+                this.newUserName = '';
+                this.newUserSurname = '';
             }
-
-            if (!this.users) {
-                this.users = [];
-            }
-
-            this.users.push(value);
-
-            tree.node.value = '';
         }
     };
 
     a2.init();
 
-    //a2.users[1] = 'iii';
+    a2.users = [
+        {
+            name : 'Eugene',
+            surname : 'Poltorakov'
+        }
+    ];
 
 </script>
 </body>
