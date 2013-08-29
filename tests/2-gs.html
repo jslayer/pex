@@ -30,6 +30,14 @@
         <input type="text" a2-model="user" />
         <hr>
     </div>
+
+    <table a2-for="user, i in users">
+        <tr>
+            <td>{{ i }}</td>
+            <td>{{ user }}</td>
+            <td><input a2-model="user" /></td>
+        </tr>
+    </table>
 </div>
 <script>
     var Plugins = {},
@@ -148,7 +156,7 @@
          * @param capture
          * @returns {*}
          */
-        on  : function(node, type, fn, capture){
+        on : function(node, type, fn, capture){
             var i, l, types;
 
             types = type.split(' ');
@@ -159,6 +167,7 @@
 
             return this;
         },
+
         /**
          * @param node
          * @param type
@@ -176,6 +185,14 @@
             }
 
             return this;
+        },
+
+        /**
+         * @param {Element} node
+         * @returns {boolean}
+         */
+        haveFocus : function(node){
+            return document.activeElement && node === document.activeElement ? true : false;
         }
     };
 
@@ -553,8 +570,13 @@
 
             while (tmp.parent) {
                 if (tmp.closure && typeof tmp.closure[name] !== 'undefined') {
+                    if (~['$index', '$model'].indexOf(name)) {
+                        break;
+                    }
                     if (typeof tmp.closure['$index'] != 'undefined' && typeof tmp.closure['$model'] != 'undefined') {
-                        name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                        if (typeof tmp.closure['$__key'] === 'undefined' || tmp.closure['$__key'] !== name) {
+                            name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                        }
                     }
                     break;
                 }
@@ -693,6 +715,7 @@
 
             if (cfg.key) {
                 closure[cfg.key] = index;
+                closure['$__key'] = cfg.key;
             }
             closure['$index'] = index;
             closure['$model'] = cfg.model;
@@ -798,12 +821,24 @@
                 tree.node.value = host.resolveValue(modelName, tree);
             }
 
-            Base.Node.on(tree.node, 'keyup input', function(e){
+            Base.Node.on(tree.node, 'input', function(e){
                 host.setValue(host.resolveModelName(modelName, tree), e.target.value);
             });
 
             host.listen(host.resolveModelName(modelName, tree), function(e){
+                var ss, se;
+
+                if (Base.Node.haveFocus(tree.node)) {
+                    ss = tree.node.selectionStart;
+                    se = tree.node.selectionEnd;
+                }
+
                 tree.node.value = e.data.newVal;
+
+                if (typeof ss !== 'undefined' && typeof se !== 'undefined') {
+                    tree.node.selectionStart = ss;
+                    tree.node.selectionEnd = se;
+                }
             });
         }
     }, {
@@ -866,8 +901,6 @@
     a2.init();
 
     //a2.users[1] = 'iii';
-
-
 
 </script>
 </body>
