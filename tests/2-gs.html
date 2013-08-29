@@ -18,7 +18,7 @@
     <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
         <li>{{ i }} : <b>{{ user }}</b> <input type="text" a2-model="user" /></li>
     </ul>
-    <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
+    <!--<ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
         <li>{{ i }} / <i>{{ user }}</i> <input type="text" a2-model="user" /></li>
     </ul>
     <ul a2-for="user, i in users" style="padding: 10px; border: 1px solid red;">
@@ -29,7 +29,7 @@
         <div>{{ $index }} : <b>{{ user }}</b></div>
         <input type="text" a2-model="user" />
         <hr>
-    </div>
+    </div>-->
 
     <table a2-for="user, i in users">
         <tr>
@@ -606,12 +606,6 @@
         PREFIX : 'a2'
     });
 
-    a2 = new A2({
-        node  : document.getElementById('test'),
-        users : ['default', 'admin'],
-        title : 111
-    });
-
     function PluginBase(){
         this.host = arguments[0];
 
@@ -638,11 +632,22 @@
         },
 
         _pre : function(tree, value){
-            var parts, rawTpl, tpl = [], i, l;
+            var parts, rawTpl = [], tpl = [], i, l, append;
 
             parts = value.match(/(\w+)\s*(?:,\s*(.))?\s+in\s+(\w+)/).slice(1);
 
-            rawTpl = Array.prototype.splice.call(tree.node.childNodes, 0);
+            if (tree.node.tagName === 'TABLE') {
+                rawTpl = tree.node.querySelector('tbody');
+                //rawTpl = tree.node.tBodies.length > 0 ? tree.node.tBodies[0] : [];
+
+                if (rawTpl) {
+                    append = rawTpl.cloneNode(false);
+                    rawTpl = Array.prototype.splice.call(rawTpl.childNodes, 0);
+                }
+            }
+            else {
+                rawTpl = Array.prototype.splice.call(tree.node.childNodes, 0);
+            }
 
             for (i = 0, l = rawTpl.length; i < l; i++) {
                 if (rawTpl[i].nodeType !== 3 || (rawTpl[i].nodeType === 1 && rawTpl[i].textContent.trim().length > 0)) {
@@ -657,11 +662,17 @@
                 tpl   : tpl
             });
 
+            //todo - change this
             tree.node.innerHTML = '';
+
+            if (append) {
+                tree.node.appendChild(append);
+            }
         },
 
         process       : function(tree, cfg){
-            var self = this;
+            var target,
+                self = this;
 
             if (!(cfg.model in this.host)) {
                 //todo - blablabla
@@ -683,13 +694,19 @@
 
                         item = this._parseElement(tree, cfg, value, e.data.newVal.length - 1);
 
-                        tree.node.appendChild(item.node);
+                        target = tree.node;
+
+                        if (target.tagName === 'TABLE' && target.tBodies.length > 0) {
+                            target = target.tBodies[0];
+                        }
+
+                        target.appendChild(item.node);
                         break;
                 }
             }, this);
         },
         generate      : function(tree, cfg){
-            var i, l, frag, list = this.host[cfg.model];
+            var i, l, frag, list = this.host[cfg.model], target;
 
             tree.children = [];
 
@@ -705,7 +722,13 @@
                 frag.appendChild(tree.children[i].node);
             }
 
-            tree.node.appendChild(frag);
+            target = tree.node;
+
+            if (target.tagName === 'TABLE' && target.tBodies.length > 0) {
+                target = target.tBodies[0];
+            }
+
+            target.appendChild(frag);
         },
         _parseElement : function(tree, cfg, value, index){
             var i, l,
@@ -872,6 +895,12 @@
         }
     }, {
         SUFFIX : 'enter'
+    });
+
+    a2 = new A2({
+        node  : document.getElementById('test'),
+        users : ['default', 'admin'],
+        title : 111
     });
 
     a2.plug(Plugins.PluginNodeForIn);
