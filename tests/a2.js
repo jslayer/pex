@@ -581,7 +581,9 @@ A2 = Base.extend('A2', Base, [Plugin], {
                     break;
                 }
                 if (typeof tmp.closure['$index'] !== 'undefined' && typeof tmp.closure['$model'] !== 'undefined') {
-                    name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                    if (tmp.closure['$model'] !== name) {
+                        name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                    }
                     break;
                 }
             }
@@ -827,7 +829,9 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
             closure = {};
 
         closure['$index'] = index;
+        closure['$model'] = cfg.model;
         closure[cfg.name] = value;
+        closure['$__key'] = cfg.key;
 
         frag = document.createDocumentFragment();
 
@@ -900,8 +904,6 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
         else {
             tree.node.textContent = host.resolveValue(modelName, tree);
         }
-
-        //console.log(host.resolveModelName(modelName, tree));
 
         host.listen(host.resolveModelName(modelName, tree), function(e){
             switch (e.type) {
