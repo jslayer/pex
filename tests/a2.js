@@ -187,7 +187,7 @@ Base.prototype.define = function(name, attrs){
     });
 
     if (attrs) {
-        if (attrs.value) {
+        if (typeof attrs.value !== 'undefined') {
             if (Object.prototype.toString.call(attrs.value) === '[object Object]') {
                 this[name] = Object.create(attrs.value);
             }
@@ -458,15 +458,17 @@ A2 = Base.extend('A2', Base, [Plugin], {
             parent : parent || false
         };
 
-        notDive = this._plugins.some(function(name){
-            var plugin = this[name];
+        var dive = true, plugin;
 
-            return plugin && plugin.validate ? plugin.validate(tree) : false;
-        }, this);
+        for (i = 0, l = this._plugins.length; i < l; i++) {
+            plugin = this[this._plugins[i]];
+
+            dive &= (plugin && plugin.validate ? !plugin.validate(tree) : true);
+        }
 
         children = node.childNodes;
 
-        if (!notDive && children && children.length > 0) {
+        if (dive && children && children.length > 0) {
             tree.children = [];
 
             for (i = 0, l = children.length; i < l; i++) {
@@ -555,7 +557,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
             }
         }
 
-        if (typeof value === 'undefined' && this[name]) {
+        if (typeof value === 'undefined' && typeof this[name] !== 'undefined') {
             value = this[name];
         }
 
@@ -731,7 +733,9 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
             self = this;
 
         if (!(cfg.model in this.host)) {
-            this.host.define(cfg.model);
+            this.host.define(cfg.model, {
+                value : []
+            });
         }
         else {
             this.generate(tree, cfg);
@@ -874,7 +878,7 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                     if (child.nodeType === 3) {
                         frag = document.createDocumentFragment();
 
-                        texts = child.textContent.split(/({{\s*[a-z.0-9$]+\s*}})/g);
+                        texts = child.textContent.split(/({{\s*[a-zA-Z.0-9$]+\s*}})/g);
 
                         for (ii = 0, ll = texts.length; ii < ll; ii++) {
                             frag.appendChild(document.createTextNode(texts[ii]));
@@ -885,7 +889,7 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                 }
                 break;
             case 3:
-                match = tree.node.textContent.match(/{{\s*([a-z.0-9$]+)\s*}}/);//todo - change
+                match = tree.node.textContent.match(/{{\s*([a-zA-Z.0-9$]+)\s*}}/);//todo - change
 
                 if (match && match.length === 2) {
                     this.host.setConfig(tree, this, this.host.resolveModelName(match[1], tree));
@@ -899,7 +903,9 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
         var host = this.host;
 
         if (typeof host.resolveValue(modelName, tree) === 'undefined') {
-            host.define(modelName)
+            host.define(modelName, {
+                value : ''
+            });
         }
         else {
             tree.node.textContent = host.resolveValue(modelName, tree);
@@ -917,9 +923,9 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
     }
 });
 
-Plugins.PluginNodeInput = Base.extend('PluginNodeInput', PluginBase, [], {
+Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
     validate : function(tree){
-        if (tree.node.tagName === 'INPUT') {
+        if (~['INPUT', 'SELECT', 'OPTION'].indexOf(tree.node.tagName)) {
             var model = tree.node.getAttribute([
                 this.host.constructor.PREFIX,
                 this.constructor.SUFFIX
@@ -935,31 +941,53 @@ Plugins.PluginNodeInput = Base.extend('PluginNodeInput', PluginBase, [], {
         var host = this.host;
 
         if (typeof host.resolveValue(modelName, tree) === 'undefined') {
-            host.define(modelName);
+            host.define(modelName, {
+                value : ''
+            });
         }
         else {
             tree.node.value = host.resolveValue(modelName, tree);
         }
 
-        Base.Node.on(tree.node, 'input', function(e){
-            host.setValue(host.resolveModelName(modelName, tree), e.target.value);
-        });
+        switch(tree.node.tagName) {
+            case 'INPUT':
+                Base.Node.on(tree.node, 'input', function(e){
+                    host.setValue(host.resolveModelName(modelName, tree), e.target.value);
+                });
 
-        host.listen(host.resolveModelName(modelName, tree), function(e){
-            var ss, se;
+                host.listen(host.resolveModelName(modelName, tree), function(e){
+                    var ss, se;
 
-            if (Base.Node.haveFocus(tree.node)) {
-                ss = tree.node.selectionStart;
-                se = tree.node.selectionEnd;
-            }
+                    if (Base.Node.haveFocus(tree.node)) {
+                        ss = tree.node.selectionStart;
+                        se = tree.node.selectionEnd;
+                    }
 
-            tree.node.value = e.data.newVal;
+                    tree.node.value = e.data.newVal;
 
-            if (typeof ss !== 'undefined' && typeof se !== 'undefined') {
-                tree.node.selectionStart = ss;
-                tree.node.selectionEnd = se;
-            }
-        });
+                    if (typeof ss !== 'undefined' && typeof se !== 'undefined') {
+                        tree.node.selectionStart = ss;
+                        tree.node.selectionEnd = se;
+                    }
+                });
+                break;
+            case 'OPTION':
+                host.listen(host.resolveModelName(modelName, tree), function(e){
+                    tree.node.value = host.resolveValue(modelName, tree);
+                });
+                break;
+            case 'SELECT':
+                Base.Node.on(tree.node, 'change', function(e){
+                    host.setValue(host.resolveModelName(modelName, tree), e.target.value);
+                });
+
+                host.listen(host.resolveModelName(modelName, tree), function(e){
+                    tree.node.value = e.data.newVal;
+                });
+                break;
+        }
+
+
     }
 }, {
     SUFFIX : 'model'

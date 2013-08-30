@@ -12,11 +12,17 @@
     <input type="text" a2-model="title" />-->
 
     <!--<p>{{ users }}</p>-->
+    {{ newUserAfter }}
 
     <hr>
 
     Name: <input type="text" a2-model="newUserName" a2-enter="onEnterHandler" />
     Surname: <input type="text" a2-model="newUserSurname" a2-enter="onEnterHandler" />
+
+    After :
+    <select a2-for="user, i in users" a2-model="newUserAfter">
+        <option a2-model="i">{{ i }}</option>
+    </select>
 
     <hr>
 
@@ -40,14 +46,12 @@
 <script src="a2.js"></script>
 <script>
     var a2 = new A2({
-        node  : document.getElementById('test'),
-        //users : [],
-        title : 111
+        node         : document.getElementById('test')
     });
 
     a2.plug(Plugins.PluginNodeForIn);
     a2.plug(Plugins.PluginNodeText);
-    a2.plug(Plugins.PluginNodeInput);
+    a2.plug(Plugins.PluginNodeModel);
     a2.plug(Plugins.PluginNodeEnter);
     a2.plug(Plugins.PluginNodeClick);
 
@@ -64,11 +68,9 @@
             if (value) {
 
                 if (!('users' in this)) {
-                    this.host.define('users');
-                }
-
-                if (!this.users) {
-                    this.users = [];
+                    this.host.define('users', {
+                        value : []
+                    });
                 }
 
                 this.users.push(value);
@@ -80,7 +82,6 @@
     };
 
     a2.deleteItem = function(list, index){
-        //console.log(arguments);
         list.splice(index, 1);
     };
 
@@ -104,6 +105,8 @@
             surname : 'Poltorakov'
         }
     ];
+
+    a2.newUserAfter = 1;
 
 </script>
 </body>
