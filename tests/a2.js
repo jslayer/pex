@@ -729,6 +729,8 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
     },
 
     process : function(tree, cfg){
+        //todo - if node is select & it have model attr - the model value could change after list changes
+        
         var target,
             self = this;
 
@@ -743,6 +745,8 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
 
         this.host.listen(this.host.resolveModelName(cfg.model, tree), function(e){
             var value, item, i, l;
+
+            console.log(e);
 
             switch (e.type) {
                 case 'change':
@@ -959,8 +963,12 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
     process : function(tree, data){
         var host = this.host,
             model = data.model,
-            initialValue = '',
-            currentValue;
+            initialValue,
+            modelDefined;
+
+        initialValue = host.resolveValue(model, tree);
+
+        modelDefined = typeof initialValue !== 'undefined';
 
         switch (data.type) {
             case 'text':
@@ -990,13 +998,15 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                 });
 
                 host.listen(host.resolveModelName(model, tree), function(e){
-                    tree.node.checked = !!e.data.newVal;
+                    tree.node.checked = !!host.resolveValue(model, tree);
                 });
 
-                initialValue = tree.node.checked ? tree.node.value : false;
-                currentValue = tree.node.value;
-
-                tree.node.checked = !!initialValue;
+                if (modelDefined) {
+                    tree.node.checked = !!initialValue;
+                }
+                else {
+                    initialValue = tree.node.checked ? tree.node.value : false;
+                }
                 break;
             case 'option':
                 host.listen(host.resolveModelName(model, tree), function(e){
@@ -1009,23 +1019,24 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                 });
 
                 host.listen(host.resolveModelName(model, tree), function(e){
+                    console.log(e);
                     tree.node.value = e.data.newVal;
                 });
                 break;
         }
 
-        if (typeof host.resolveValue(model, tree) === 'undefined') {
+        if (typeof initialValue === 'undefined') {
+            initialValue = '';
+        }
+
+        if (!modelDefined) {
             host.define(model, {
                 value : initialValue
             });
         }
         else {
-            if (typeof currentValue === 'undefined') {
-                currentValue = host.resolveValue(model, tree);
-            }
-            tree.node.value = currentValue;
+            tree.node.value = initialValue;
         }
-
     }
 }, {
     SUFFIX : 'model'

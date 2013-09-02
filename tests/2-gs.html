@@ -6,53 +6,43 @@
 </head>
 <body>
 <div id="test">
-    {{ newUserAfter }}
+    <fieldset>
+        <legend>
+            <label>
+                <input type="checkbox" a2-model="showForm" checked /> Form
+            </label>
+        </legend>
+        <div a2-show="showForm">
+            Name: <input type="text" a2-model="newUserName" a2-enter="onEnterHandler" />
+            Surname: <input type="text" a2-model="newUserSurname" a2-enter="onEnterHandler" />
 
-    <hr>
+            After :
+            <select a2-for="user, i in users" a2-model="newUserAfter">
+                <option a2-model="i">{{ i }}</option>
+            </select>
 
-    Name: <input type="text" a2-model="newUserName" a2-enter="onEnterHandler" />
-    Surname: <input type="text" a2-model="newUserSurname" a2-enter="onEnterHandler" />
+            ModelValue = {{ newUserAfter }}
 
-    After :
-    <select a2-for="user, i in users" a2-model="newUserAfter">
-        <option a2-model="i">{{ i }}</option>
-    </select>
+            <hr>
 
-    <hr>
+            <ul a2-for="user in users">
+                <li>{{ user.name }} {{ user.surname }}</li>
+            </ul>
 
-    <ul a2-for="user in users">
-        <li>{{ user.name }} {{ user.surname }}</li>
-    </ul>
-
-    <table a2-for="user, i in users">
-        <tr>
-            <td>{{ i }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.surname }}</td>
-            <td><input a2-model="user.name" /></td>
-            <td><input a2-model="user.surname" /></td>
-            <td>
-                <button a2-click="deleteItem users, i">x</button>
-            </td>
-        </tr>
-    </table>
-
-    <input type="checkbox" a2-model="show" />
-    <input type="checkbox" a2-model="show" />
-
-    {{ show }}
-
-    <div a2-show="show">SHOW DIV</div>
-
-    <ul a2-show="show"><li>SHOW UL</li></ul>
-
-    <ul><li a2-show="show">SHOW UL</li></ul>
-
-    <table a2-show="show"><tr><td>SHOW TABLE 1</td></tr></table>
-
-    <table a2-show="show" style="display: none"><tr><td>SHOW TABLE 2</td></tr></table>
-
-    <div a2-hide="show">HIDE</div>
+            <table a2-for="user, i in users">
+                <tr>
+                    <td>{{ i }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.surname }}</td>
+                    <td><input a2-model="user.name" /></td>
+                    <td><input a2-model="user.surname" /></td>
+                    <td>
+                        <button a2-click="deleteItem users, i">x</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </fieldset>
 </div>
 <script src="a2.js"></script>
 <script>
