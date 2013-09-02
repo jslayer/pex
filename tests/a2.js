@@ -198,7 +198,7 @@ Base.prototype.define = function(name, attrs){
     }
 
     function re(o, pName){
-        var i, l,
+        var i,
             self = this;
 
         switch (Object.prototype.toString.call(o)) {
@@ -451,14 +451,14 @@ A2 = Base.extend('A2', Base, [Plugin], {
     },
 
     parse : function(node, parent){
-        var i, l, tree, child, children, go, notDive;
+        var i, l, tree, child, children, go, dive, plugin;
 
         tree = {
             node   : node,
             parent : parent || false
         };
 
-        var dive = true, plugin;
+        dive = true;
 
         for (i = 0, l = this._plugins.length; i < l; i++) {
             plugin = this[this._plugins[i]];
@@ -730,9 +730,8 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
 
     process : function(tree, cfg){
         //todo - if node is select & it have model attr - the model value could change after list changes
-        
-        var target,
-            self = this;
+
+        var target;
 
         if (!(cfg.model in this.host)) {
             this.host.define(cfg.model, {
@@ -744,9 +743,7 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
         }
 
         this.host.listen(this.host.resolveModelName(cfg.model, tree), function(e){
-            var value, item, i, l;
-
-            console.log(e);
+            var value, item, i, l, _ix, _rList;
 
             switch (e.type) {
                 case 'change':
@@ -761,12 +758,12 @@ Plugins.PluginNodeForIn = Base.extend('PluginNodeForIn', PluginBase, [], {
                         target = target.tBodies[0];
                     }
 
-                    var _ix = {
+                    _ix = {
                         s : e.data.index * cfg.tpl.length,
                         e : e.data.index * cfg.tpl.length + e.data.length * cfg.tpl.length
                     };
 
-                    var _rList = Array.prototype.slice.call(target.childNodes, _ix.s, _ix.e);
+                    _rList = Array.prototype.slice.call(target.childNodes, _ix.s, _ix.e);
 
                     for (i = 0, l = _rList.length; i < l; i++) {
                         target.removeChild(_rList[i]);
