@@ -6,7 +6,7 @@
 </head>
 <body>
 <div id="test">
-    <!--{{ newUserAfter }}
+    {{ newUserAfter }}
 
     <hr>
 
@@ -35,12 +35,24 @@
                 <button a2-click="deleteItem users, i">x</button>
             </td>
         </tr>
-    </table>-->
+    </table>
 
     <input type="checkbox" a2-model="show" />
     <input type="checkbox" a2-model="show" />
 
     {{ show }}
+
+    <div a2-show="show">SHOW DIV</div>
+
+    <ul a2-show="show"><li>SHOW UL</li></ul>
+
+    <ul><li a2-show="show">SHOW UL</li></ul>
+
+    <table a2-show="show"><tr><td>SHOW TABLE 1</td></tr></table>
+
+    <table a2-show="show" style="display: none"><tr><td>SHOW TABLE 2</td></tr></table>
+
+    <div a2-hide="show">HIDE</div>
 </div>
 <script src="a2.js"></script>
 <script>
@@ -53,6 +65,8 @@
     a2.plug(Plugins.PluginNodeModel);
     a2.plug(Plugins.PluginNodeEnter);
     a2.plug(Plugins.PluginNodeClick);
+    a2.plug(Plugins.PluginNodeShow);
+    a2.plug(Plugins.PluginNodeHide);
 
     a2.onEnterHandler = function(tree){
         var un = this.newUserName,

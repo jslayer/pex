@@ -899,7 +899,8 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                 break;
         }
     },
-    process  : function(tree, modelName){
+
+    process : function(tree, modelName){
         var host = this.host;
 
         if (typeof host.resolveValue(modelName, tree) === 'undefined') {
@@ -1043,7 +1044,8 @@ Plugins.PluginNodeEnter = Base.extend('PluginNodeEnter', PluginBase, [], {
             }
         }
     },
-    process  : function(tree, enter){
+
+    process : function(tree, enter){
         var host = this.host;
 
         Base.Node.on(tree.node, 'keydown', function(e){
@@ -1072,7 +1074,8 @@ Plugins.PluginNodeClick = Base.extend('PluginNodeClick', PluginBase, [], {
             }
         }
     },
-    process  : function(tree, click){
+
+    process : function(tree, click){
         var host = this.host;
 
         Base.Node.on(tree.node, 'click', function(e){
@@ -1086,4 +1089,81 @@ Plugins.PluginNodeClick = Base.extend('PluginNodeClick', PluginBase, [], {
     }
 }, {
     SUFFIX : 'click'
+});
+
+Plugins.PluginNodeDisplayAbstract = Base.extend('PluginNodeDisplayAbstract', PluginBase, [], {
+    validate : function(tree){
+        if (tree.node.nodeType === 1) {
+            var model = tree.node.getAttribute([
+                this.host.constructor.PREFIX,
+                this.constructor.SUFFIX
+            ].join('-'));
+
+            if (model) {
+                this.host.setConfig(tree, this, {
+                    model   : model,
+                    display : window.getComputedStyle(tree.node, null).getPropertyValue("display")
+                });
+            }
+        }
+    },
+
+    _update : function(node, cfg, show){
+        var defaultVisible, value;
+
+        if (show) {
+            if (cfg.display !== 'none') {
+                defaultVisible = cfg.display;
+            }
+            else {
+                switch (node.tagName) {
+                    case 'TABLE':
+                        defaultVisible = 'table';
+                        break;
+                    case 'LI':
+                        defaultVisible = 'list-item';
+                        break;
+                    default :
+                        defaultVisible = 'block';
+                }
+            }
+
+            value = cfg.display !== 'none' ? cfg.display : defaultVisible;
+        }
+        else {
+            value = 'none';
+        }
+
+        node.style.display = value;
+    }
+});
+
+Plugins.PluginNodeShow = Base.extend('PluginNodeShow', Plugins.PluginNodeDisplayAbstract, [], {
+    process : function(tree, data){
+        var host = this.host,
+            plugin = this;
+
+        host.listen(host.resolveModelName(data.model, tree), function(e){
+            plugin._update(tree.node, data, host.resolveValue(data.model, tree));
+        });
+
+        plugin._update(tree.node, data, host.resolveValue(data.model, tree));
+    }
+}, {
+    SUFFIX : 'show'
+});
+
+Plugins.PluginNodeHide = Base.extend('PluginNodeHide', Plugins.PluginNodeDisplayAbstract, [], {
+    process : function(tree, data){
+        var host = this.host,
+            plugin = this;
+
+        host.listen(host.resolveModelName(data.model, tree), function(e){
+            plugin._update(tree.node, data, !host.resolveValue(data.model, tree));
+        });
+
+        plugin._update(tree.node, data, !host.resolveValue(data.model, tree));
+    }
+}, {
+    SUFFIX : 'hide'
 });
