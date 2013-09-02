@@ -925,37 +925,49 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
 
 Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
     validate : function(tree){
+        var model, type;
+
         if (~['INPUT', 'SELECT', 'OPTION'].indexOf(tree.node.tagName)) {
-            var model = tree.node.getAttribute([
+            model = tree.node.getAttribute([
                 this.host.constructor.PREFIX,
                 this.constructor.SUFFIX
             ].join('-'));
 
             if (model) {
-                this.host.setConfig(tree, this, this.host.resolveModelName(model, tree));
+
+                switch (tree.node.tagName) {
+                    case 'SELECT':
+                        type = 'select';
+                        break;
+                    case 'OPTION':
+                        type = 'option';
+                        break;
+                    case 'INPUT':
+                        type = tree.node.type;
+                        break;
+                }
+
+                this.host.setConfig(tree, this, {
+                    model : this.host.resolveModelName(model, tree),
+                    type  : type
+                });
             }
         }
     },
 
-    process : function(tree, modelName){
-        var host = this.host;
+    process : function(tree, data){
+        var host = this.host,
+            model = data.model,
+            initialValue = '',
+            currentValue;
 
-        if (typeof host.resolveValue(modelName, tree) === 'undefined') {
-            host.define(modelName, {
-                value : ''
-            });
-        }
-        else {
-            tree.node.value = host.resolveValue(modelName, tree);
-        }
-
-        switch(tree.node.tagName) {
-            case 'INPUT':
+        switch (data.type) {
+            case 'text':
                 Base.Node.on(tree.node, 'input', function(e){
-                    host.setValue(host.resolveModelName(modelName, tree), e.target.value);
+                    host.setValue(host.resolveModelName(model, tree), e.target.value);
                 });
 
-                host.listen(host.resolveModelName(modelName, tree), function(e){
+                host.listen(host.resolveModelName(model, tree), function(e){
                     var ss, se;
 
                     if (Base.Node.haveFocus(tree.node)) {
@@ -971,22 +983,47 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                     }
                 });
                 break;
-            case 'OPTION':
-                host.listen(host.resolveModelName(modelName, tree), function(e){
-                    tree.node.value = host.resolveValue(modelName, tree);
-                });
-                break;
-            case 'SELECT':
+            case 'checkbox':
                 Base.Node.on(tree.node, 'change', function(e){
-                    host.setValue(host.resolveModelName(modelName, tree), e.target.value);
+                    host.setValue(host.resolveModelName(model, tree), e.target.checked ? e.target.value : false);
                 });
 
-                host.listen(host.resolveModelName(modelName, tree), function(e){
+                host.listen(host.resolveModelName(model, tree), function(e){
+                    tree.node.checked = !!e.data.newVal;
+                });
+
+                initialValue = tree.node.checked ? tree.node.value : false;
+                currentValue = tree.node.value;
+
+                tree.node.checked = !!initialValue;
+                break;
+            case 'option':
+                host.listen(host.resolveModelName(model, tree), function(e){
+                    tree.node.value = host.resolveValue(model, tree);
+                });
+                break;
+            case 'select':
+                Base.Node.on(tree.node, 'change', function(e){
+                    host.setValue(host.resolveModelName(model, tree), e.target.value);
+                });
+
+                host.listen(host.resolveModelName(model, tree), function(e){
                     tree.node.value = e.data.newVal;
                 });
                 break;
         }
 
+        if (typeof host.resolveValue(model, tree) === 'undefined') {
+            host.define(model, {
+                value : initialValue
+            });
+        }
+        else {
+            if (typeof currentValue === 'undefined') {
+                currentValue = host.resolveValue(model, tree);
+            }
+            tree.node.value = currentValue;
+        }
 
     }
 }, {
