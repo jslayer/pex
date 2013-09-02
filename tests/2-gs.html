@@ -50,14 +50,6 @@
         node : document.getElementById('test')
     });
 
-    a2.plug(Plugins.PluginNodeForIn);
-    a2.plug(Plugins.PluginNodeText);
-    a2.plug(Plugins.PluginNodeModel);
-    a2.plug(Plugins.PluginNodeEnter);
-    a2.plug(Plugins.PluginNodeClick);
-    a2.plug(Plugins.PluginNodeShow);
-    a2.plug(Plugins.PluginNodeHide);
-
     a2.onEnterHandler = function(tree){
         var un = this.newUserName,
             us = this.newUserSurname;

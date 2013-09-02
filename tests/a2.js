@@ -424,7 +424,13 @@ Plugin.prototype.plug = function(C){
 
 A2 = Base.extend('A2', Base, [Plugin], {
     initializer : function(){
-
+        this.plug(Plugins.PluginNodeForIn);
+        this.plug(Plugins.PluginNodeText);
+        this.plug(Plugins.PluginNodeModel);
+        this.plug(Plugins.PluginNodeEnter);
+        this.plug(Plugins.PluginNodeClick);
+        this.plug(Plugins.PluginNodeShow);
+        this.plug(Plugins.PluginNodeHide);
     },
 
     init : function(){
@@ -1016,7 +1022,6 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                 });
 
                 host.listen(host.resolveModelName(model, tree), function(e){
-                    console.log(e);
                     tree.node.value = e.data.newVal;
                 });
                 break;
