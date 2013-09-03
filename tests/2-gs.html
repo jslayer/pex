@@ -6,7 +6,23 @@
 </head>
 <body>
 <div id="test">
-    <fieldset>
+
+
+    <hr>
+    <input a2-model="x" value="X" />
+    <input a2-model="y" value="Y" />
+
+    {{ x }} {{ y }}
+
+    <hr>
+
+    {{ x + y }}
+
+    <button id="aaa" a2-click="a+b(c(1))+d | list">LRT</button>
+
+    x === y(1, '2a', zzz(3, ccc())) + y
+
+    <!--<fieldset>
         <legend>
             <label>
                 <input type="checkbox" a2-model="showForm" checked /> Form
@@ -18,12 +34,20 @@
 
             After :
             <select a2-for="user, i in users" a2-model="newUserAfter">
-                <option a2-model="i">{{ i }}</option>
+                <option a2-model="i">{{ user.name }} {{ user.surname }}</option>
             </select>
 
             ModelValue = {{ newUserAfter }}
 
             <hr>
+
+            <ul a2-for="user in users">
+                <li>{{ user.name }} {{ user.surname }}</li>
+            </ul>
+
+            <ul a2-for="user in users">
+                <li>{{ user.name }} {{ user.surname }}</li>
+            </ul>
 
             <ul a2-for="user in users">
                 <li>{{ user.name }} {{ user.surname }}</li>
@@ -37,12 +61,12 @@
                     <td><input a2-model="user.name" /></td>
                     <td><input a2-model="user.surname" /></td>
                     <td>
-                        <button a2-click="deleteItem users, i">x</button>
+                        <button a2-click="deleteItem(users, i)">x</button>
                     </td>
                 </tr>
             </table>
         </div>
-    </fieldset>
+    </fieldset>-->
 </div>
 <script src="a2.js"></script>
 <script>
@@ -102,6 +126,8 @@
     ];
 
     a2.newUserAfter = 1;
+
+    document.getElementById('aaa').click();
 
 </script>
 </body>

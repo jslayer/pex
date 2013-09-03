@@ -605,8 +605,149 @@ A2 = Base.extend('A2', Base, [Plugin], {
         return name;
     },
 
+    eval : function(expr, tree){
+        //console.log(arguments);
+        var parsed = this.parseExpr(expr, tree);
+    },
+
+    parseExpr       : function(expr, tree){
+        //used models & methods
+        //type - function/plain
+
+        var result = {
+            fn     : null,
+            models : []
+        };
+
+        var stack = [];
+
+        var ch;
+
+        var mode;
+
+        var modes = {
+            string : 'T_STRING',
+            number : 'T_NUMBER',
+            id     : 'T_IDENTIFIER',
+            expr   : 'T_EXPR',
+            method : 'T_METHOD',
+            pipe   : 'T_PIPE',
+            arg    : 'T_ARG'
+        };
+
+        var cut;
+
+        var link;
+
+        var stk = [];
+
+        console.log(expr);
+
+        expr += '\u00A0';
+
+        var tkn;
+
+        var services = false;
+
+        while (expr) {
+            ch = expr.substr(0, 1);
+
+            cut = true;
+
+            switch (mode) {
+                case modes.string:
+                    if (ch === stack[0]) {//todo - backslash
+                        stk.push(mode + ':' + stack.slice(1).join(''));
+                        mode = null;
+                        stack.length = 0;
+                    }
+                    else {
+                        stack.push(ch);
+                    }
+                    break;
+                case modes.number:
+                    if (/[0-9]/.test(ch)) {
+                        stack.push(ch);
+                    }
+                    else {
+                        stk.push(mode + ':' + stack.join(''));
+                        mode = null;
+                        stack.length = 0;
+                        cut = false;
+                    }
+                    break;
+                case modes.id:
+                    if (/[0-9a-zA-Z_$]/.test(ch)) {
+                        stack.push(ch);
+                    }
+                    else if (ch === '(') {
+                        stk.push(modes.method + ':' + stack.join(''));
+                        mode = null;
+                        stack.length = 0;
+                    } else {
+                        stk.push(mode + ':' + stack.join(''));
+                        mode = null;
+                        cut = false;
+
+                        if (!services) {
+                            tkn = stack.join('');
+                            if (!~result.models.indexOf(tkn)) {
+                                result.models.push(tkn);
+                            }
+                        }
+                        stack.length = 0;
+                    }
+                    break;
+                case modes.expr:
+                    if (~'=+-*/<>'.indexOf(ch)) {
+                        stack.push(ch);
+                    }
+                    else {
+                        stk.push(mode + ':' + stack.join(''));
+                        mode = null;
+                        stack.length = 0;
+                        cut = false;
+                    }
+                    break;
+                default:
+                    if (/[a-zA-Z]/.test(ch)) {
+                        mode = modes.id;
+                        stack.push(ch);
+                    }
+                    else if (/[0-9]/.test(ch)) {
+                        mode = modes.number;
+                        stack.push(ch);
+                    }
+                    else if (~'=+-*/<>'.indexOf(ch)) {
+                        mode = modes.expr;
+                        stack.push(ch);
+                    }
+                    else if (~'"\''.indexOf(ch)) {
+                        mode = modes.string;
+                        stack.push(ch);
+                    }
+                    else if (ch === ',') {
+                        stk.push(modes.arg);
+                    }
+                    else if (ch === ')') {
+                        mode = null;
+                        stk.push('T_METHOD_CLOSE');
+                    }
+                    else if (ch === '|') {
+                        stk.push(modes.pipe);
+                        services = true;
+                    }
+            }
+
+            if (cut) {
+                expr = expr.substr(1);
+            }
+        }
+        console.log(expr.length, result.models, stk);
+    },
+
     //todo - extend (use lex)
-    resolveCallback  : function(raw, tree){
+    resolveCallback : function(raw, tree){
         var parts, out, i, l;
 
         parts = raw.split(/[,\s]+/);
@@ -953,6 +1094,7 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                     case 'INPUT':
                         type = tree.node.type;
                         break;
+                    //todo - textarea
                 }
 
                 this.host.setConfig(tree, this, {
@@ -994,6 +1136,11 @@ Plugins.PluginNodeModel = Base.extend('PluginNodeModel', PluginBase, [], {
                         tree.node.selectionEnd = se;
                     }
                 });
+
+                if (!modelDefined) {
+                    initialValue = tree.node.value;
+                }
+
                 break;
             case 'checkbox':
                 Base.Node.on(tree.node, 'change', function(e){
@@ -1083,20 +1230,23 @@ Plugins.PluginNodeClick = Base.extend('PluginNodeClick', PluginBase, [], {
             ].join('-'));
 
             if (click) {
-                this.host.setConfig(tree, this, click);
+                this.host.setConfig(tree, this, {
+                    expr : click
+                });
             }
         }
     },
 
-    process : function(tree, click){
+    process : function(tree, data){
         var host = this.host;
 
         Base.Node.on(tree.node, 'click', function(e){
-            var cbi = host.resolveCallback(click, tree);
+            host.eval(data.expr, tree);
+            /*var cbi = host.resolveCallback(click, tree);
 
-            if (cbi) {
-                host[cbi.method].apply(host, cbi.args);
-            }
+             if (cbi) {
+             host[cbi.method].apply(host, cbi.args);
+             }*/
         });
 
     }
