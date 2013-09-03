@@ -623,6 +623,8 @@ A2 = Base.extend('A2', Base, [Plugin], {
 
         var ch;
 
+        var empty = '';
+
         var mode;
 
         var modes = {
@@ -637,9 +639,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
 
         var cut;
 
-        var link;
-
-        var stk = [];
+        var fns = [];
 
         console.log(expr);
 
@@ -657,7 +657,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
             switch (mode) {
                 case modes.string:
                     if (ch === stack[0]) {//todo - backslash
-                        stk.push(mode + ':' + stack.slice(1).join(''));
+                        fns.push(stack.slice(1).join(empty));
                         mode = null;
                         stack.length = 0;
                     }
@@ -670,22 +670,22 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         stack.push(ch);
                     }
                     else {
-                        stk.push(mode + ':' + stack.join(''));
+                        fns.push(stack.join(empty));
                         mode = null;
                         stack.length = 0;
                         cut = false;
                     }
                     break;
                 case modes.id:
-                    if (/[0-9a-zA-Z_$]/.test(ch)) {
+                    if (/[0-9a-zA-Z_.$]/.test(ch)) {
                         stack.push(ch);
                     }
                     else if (ch === '(') {
-                        stk.push(modes.method + ':' + stack.join(''));
+                        fns.push(stack.join('') + '(');
                         mode = null;
                         stack.length = 0;
                     } else {
-                        stk.push(mode + ':' + stack.join(''));
+                        fns.push('this.resolveValue(' + stack.join(empty) + ')');
                         mode = null;
                         cut = false;
 
@@ -703,7 +703,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         stack.push(ch);
                     }
                     else {
-                        stk.push(mode + ':' + stack.join(''));
+                        fns.push(stack.join(empty));
                         mode = null;
                         stack.length = 0;
                         cut = false;
@@ -727,14 +727,14 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         stack.push(ch);
                     }
                     else if (ch === ',') {
-                        stk.push(modes.arg);
+                        fns.push(',');
                     }
                     else if (ch === ')') {
                         mode = null;
-                        stk.push('T_METHOD_CLOSE');
+                        fns.push(')');
                     }
                     else if (ch === '|') {
-                        stk.push(modes.pipe);
+                        //todo - 2
                         services = true;
                     }
             }
@@ -743,7 +743,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
                 expr = expr.substr(1);
             }
         }
-        console.log(expr.length, result.models, stk);
+        console.log(expr.length, result.models, fns.join(empty));
     },
 
     //todo - extend (use lex)
