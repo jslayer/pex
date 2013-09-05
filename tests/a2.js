@@ -487,6 +487,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         go = true;
                         break;
                     case 3://Text Node
+                        console.log(child.textContent);
                         if (child.textContent.trim().length > 0) {
                             go = true;
                         }
@@ -532,8 +533,12 @@ A2 = Base.extend('A2', Base, [Plugin], {
         return result;
     },
 
-    resolveValue : function(name, tree){
+    resolveValue : function(name, tree, resolveName){
         var value, tmp = tree, parts, i, l;
+
+        if (resolveName) {
+            name = this.resolveModelName(name, tree);
+        }
 
         if (~name.indexOf('.')) {
             parts = name.split('.');
@@ -552,7 +557,11 @@ A2 = Base.extend('A2', Base, [Plugin], {
             tmp = tmp.parent;
         }
 
-        if (parts) {
+        if (typeof value === 'undefined' && typeof this[name] !== 'undefined') {
+            value = this[name];
+        }
+
+        if (parts && typeof value !== 'undefined') {
             for (i = 0, l = parts.length; i < l; i++) {
                 if (typeof value[parts[i]] !== 'undefined') {
                     value = value[parts[i]];
@@ -563,15 +572,13 @@ A2 = Base.extend('A2', Base, [Plugin], {
             }
         }
 
-        if (typeof value === 'undefined' && typeof this[name] !== 'undefined') {
-            value = this[name];
-        }
-
         return value;
     },
 
     resolveModelName : function(name, tree){
         var tmp = tree, suffix, parts;
+
+        //console.log(name);
 
         if (~name.indexOf('.')) {
             parts = name.split('.');
@@ -591,8 +598,9 @@ A2 = Base.extend('A2', Base, [Plugin], {
                 if (typeof tmp.closure['$index'] !== 'undefined' && typeof tmp.closure['$model'] !== 'undefined') {
                     if (tmp.closure['$model'] !== name) {
                         name = [tmp.closure['$model'], tmp.closure['$index']].join('.');
+                        console.log(name, tmp.closure);
+                        break;
                     }
-                    break;
                 }
             }
             tmp = tmp.parent;
@@ -602,32 +610,38 @@ A2 = Base.extend('A2', Base, [Plugin], {
             name = [name, suffix].join('.');
         }
 
+        //console.log(name, suffix);
+
         return name;
     },
 
-    eval : function(expr, tree){
-        //console.log(arguments);
-        var parsed = this.parseExpr(expr, tree);
+    callService : function(){
+        return arguments[1];
     },
 
-    parseExpr       : function(expr, tree){
-        //used models & methods
-        //type - function/plain
+    eval : function(expr, tree){
+        var parsed = this.parseExpr(expr, tree);
 
+        parsed.fn.call(this, tree)
+    },
+
+    parseExpr : function(expr, tree){
         var result = {
-            fn     : null,
-            models : []
-        };
+                fn     : null,
+                models : []
+            },
+            stack = [],
+            ch,
+            empty = '',
+            mode,
+            modes,
+            cut,
+            fns = [],
+            tkn,
+            services = false,
+            waitingForService = false;
 
-        var stack = [];
-
-        var ch;
-
-        var empty = '';
-
-        var mode;
-
-        var modes = {
+        modes = {
             string : 'T_STRING',
             number : 'T_NUMBER',
             id     : 'T_IDENTIFIER',
@@ -637,17 +651,9 @@ A2 = Base.extend('A2', Base, [Plugin], {
             arg    : 'T_ARG'
         };
 
-        var cut;
-
-        var fns = [];
-
-        console.log(expr);
+        //console.log(expr);
 
         expr += '\u00A0';
-
-        var tkn;
-
-        var services = false;
 
         while (expr) {
             ch = expr.substr(0, 1);
@@ -657,7 +663,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
             switch (mode) {
                 case modes.string:
                     if (ch === stack[0]) {//todo - backslash
-                        fns.push(stack.slice(1).join(empty));
+                        fns.push(stack[0] + stack.slice(1).join(empty) + stack[0]);
                         mode = null;
                         stack.length = 0;
                     }
@@ -681,11 +687,34 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         stack.push(ch);
                     }
                     else if (ch === '(') {
-                        fns.push(stack.join('') + '(');
+                        if (waitingForService) {
+                            waitingForService = false;
+                            fns.unshift('this.callService("' + stack.join(empty) + '", ');
+                            fns.push(', ');
+                        }
+                        else {
+                            fns.push(stack.join(empty) + '(');
+                        }
                         mode = null;
                         stack.length = 0;
                     } else {
-                        fns.push('this.resolveValue(' + stack.join(empty) + ')');
+                        if (waitingForService) {
+                            waitingForService = false;
+                            fns.unshift('this.callService("' + stack.join(empty) + '", ');
+                            fns.push(')');
+                        }
+                        else {
+                            /*console.log(stack.join(empty), this.resolveModelName(stack.join(empty), tree));
+                             if (typeof this.resolveValue(stack.join(empty), tree, true) === 'undefined') {
+                             console.log(this.resolveModelName(stack.join(empty), tree));
+                             */
+                            /*this.define(this.resolveModelName(stack.join(empty), tree), {
+                             value : ''
+                             });*/
+                            /*
+                             }*/
+                            fns.push('this.resolveValue("' + stack.join(empty) + '", tree, true)');
+                        }
                         mode = null;
                         cut = false;
 
@@ -734,7 +763,7 @@ A2 = Base.extend('A2', Base, [Plugin], {
                         fns.push(')');
                     }
                     else if (ch === '|') {
-                        //todo - 2
+                        waitingForService = true;
                         services = true;
                     }
             }
@@ -743,47 +772,14 @@ A2 = Base.extend('A2', Base, [Plugin], {
                 expr = expr.substr(1);
             }
         }
-        console.log(expr.length, result.models, fns.join(empty));
-    },
 
-    //todo - extend (use lex)
-    resolveCallback : function(raw, tree){
-        var parts, out, i, l;
+        fns.unshift('return ');
 
-        parts = raw.split(/[,\s]+/);
+        fns.unshift('var tree = arguments[0];');
 
-        out = {
-            method : parts.shift(),
-            args   : []
-        };
+        result.fn = new Function(fns.join(empty));
 
-        for (i = 0, l = parts.length; i < l; i++) {
-            switch (parts[i]) {
-                case 'false':
-                    out.args.push(false);
-                    break;
-                case 'true':
-                    out.args.push(true);
-                    break;
-                case 'null':
-                    out.args.push(true);
-                    break;
-                default :
-                    if (parseFloat(parts[i]).toString() === parts[i]) {
-                        out.args.push(parseFloat(parts[i]));
-                    }
-                    else {
-                        out.args.push(
-                            this.resolveValue(
-                                this.resolveModelName(parts[i], tree),
-                                tree
-                            )
-                        );
-                    }
-            }
-        }
-
-        return out;
+        return result;
     },
 
     setValue : function(name, value){
@@ -1019,6 +1015,7 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                 /**
                  * Go through the child & split texts into parts
                  */
+                //console.log(tree.node);
 
                 for (i = tree.node.childNodes.length - 1; i >= 0; i--) {
                     child = tree.node.childNodes[i];
@@ -1026,7 +1023,7 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                     if (child.nodeType === 3) {
                         frag = document.createDocumentFragment();
 
-                        texts = child.textContent.split(/({{\s*[a-zA-Z.0-9$]+\s*}})/g);
+                        texts = child.textContent.split(/({{[^{]+}})/g);
 
                         for (ii = 0, ll = texts.length; ii < ll; ii++) {
                             frag.appendChild(document.createTextNode(texts[ii]));
@@ -1037,38 +1034,67 @@ Plugins.PluginNodeText = Base.extend('PluginNodeText', PluginBase, [], {
                 }
                 break;
             case 3:
-                match = tree.node.textContent.match(/{{\s*([a-zA-Z.0-9$]+)\s*}}/);//todo - change
+                match = tree.node.textContent.trim().match(/^{{([^{]+)}}$/);
 
                 if (match && match.length === 2) {
-                    this.host.setConfig(tree, this, this.host.resolveModelName(match[1], tree));
-
+                    this.host.setConfig(tree, this, match[1].trim());
                     tree.node.textContent = '';
-                }
+                }/* else {
+                    texts = tree.node.textContent.split(/({{[^{]+}})/g);
+
+                    if (texts.length > 1) {
+                        frag = document.createDocumentFragment();
+
+                        for (ii = 0, ll = texts.length; ii < ll; ii++) {
+                            child = document.createTextNode(texts[ii]);
+                            if (new RegExp(/^{{[^{]+}}$/g).test(texts[ii])) {
+
+                            }
+                            frag.appendChild(child);
+                        }
+
+                        tree.node.parentNode.replaceChild(frag, tree.node);
+                    }
+
+                    console.log(texts);
+                }*/
+                /*
+                 console.log(tree.node.textContent.split(/({{[^{]+}})/g), match);
+
+                 if (match && match.length === 2) {
+
+                 }*/
                 break;
         }
     },
 
-    process : function(tree, modelName){
+    process : function(tree, expr){
         var host = this.host;
 
-        if (typeof host.resolveValue(modelName, tree) === 'undefined') {
-            host.define(modelName, {
-                value : ''
-            });
-        }
-        else {
-            tree.node.textContent = host.resolveValue(modelName, tree);
-        }
+        var parsed = host.parseExpr(expr, tree);
 
-        host.listen(host.resolveModelName(modelName, tree), function(e){
-            switch (e.type) {
-                case 'splice':
-                    tree.node.textContent = host.resolveValue(modelName, tree);
-                    break;
-                default:
-                    tree.node.textContent = e.data.newVal;
-            }
-        });
+        tree.node.textContent = parsed.fn.call(host, tree);
+
+        //console.log(parsed);
+
+        var i, l;
+
+        for (i = 0, l = parsed.models.length; i < l; i++) {
+            //console.log(parsed.models[i]);
+            (function(modelName){
+                //console.log(host.resolveModelName(modelName, tree));
+                host.listen(host.resolveModelName(modelName, tree), function(e){
+                    console.log(e, modelName);
+                    switch (e.type) {
+                        case 'splice':
+                            tree.node.textContent = host.resolveValue(modelName, tree);
+                            break;
+                        default:
+                            tree.node.textContent = e.data.newVal;
+                    }
+                });
+            })(parsed.models[i]);
+        }
     }
 });
 
@@ -1242,11 +1268,6 @@ Plugins.PluginNodeClick = Base.extend('PluginNodeClick', PluginBase, [], {
 
         Base.Node.on(tree.node, 'click', function(e){
             host.eval(data.expr, tree);
-            /*var cbi = host.resolveCallback(click, tree);
-
-             if (cbi) {
-             host[cbi.method].apply(host, cbi.args);
-             }*/
         });
 
     }

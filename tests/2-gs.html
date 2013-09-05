@@ -7,20 +7,16 @@
 <body>
 <div id="test">
 
-
     <hr>
-    <input a2-model="x" value="X" />
-    <input a2-model="y" value="Y" />
-
-    {{ x }} {{ y }}
-
-    <hr>
-
-    {{ x + y }}
-
-    <button id="aaa" a2-click="a+b(c(1))+d | list">LRT</button>
-
-    x === y(1, '2a', zzz(3, ccc())) + y
+    <div a2-for="m, i in tst">
+        <div>A</div>
+        {{ x }}
+        {{ m }}
+        {{ i }}
+        <div>{{ i }}</div>
+        <input type="text" a2-model="m" />
+        <hr>
+    </div>
 
     <!--<fieldset>
         <legend>
@@ -34,7 +30,7 @@
 
             After :
             <select a2-for="user, i in users" a2-model="newUserAfter">
-                <option a2-model="i">{{ user.name }} {{ user.surname }}</option>
+                <option a2-model="i">{{ user.name + user.surname }}</option>
             </select>
 
             ModelValue = {{ newUserAfter }}
@@ -42,22 +38,21 @@
             <hr>
 
             <ul a2-for="user in users">
-                <li>{{ user.name }} {{ user.surname }}</li>
+                <li>{{ user.name + ' , ' + user.surname }}</li>
             </ul>
 
             <ul a2-for="user in users">
-                <li>{{ user.name }} {{ user.surname }}</li>
+                <li>{{ user.name + ' , ' + user.surname }}</li>
             </ul>
 
             <ul a2-for="user in users">
-                <li>{{ user.name }} {{ user.surname }}</li>
+                <li>{{ user.name + ' , ' + user.surname }}</li>
             </ul>
 
             <table a2-for="user, i in users">
                 <tr>
                     <td>{{ i }}</td>
-                    <td>{{ user.name }}</td>
-                    <td>{{ user.surname }}</td>
+                    <td>{{ user.name + ' ' + user.surname }}</td>
                     <td><input a2-model="user.name" /></td>
                     <td><input a2-model="user.surname" /></td>
                     <td>
@@ -125,9 +120,9 @@
         }
     ];
 
-    a2.newUserAfter = 1;
+    a2.tst = [1,2];
 
-    document.getElementById('aaa').click();
+    a2.newUserAfter = 1;
 
 </script>
 </body>
