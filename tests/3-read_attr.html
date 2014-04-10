@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="../bower_components/requirejs/require.js"></script>
+</head>
+<body>
+
+<a x="100" xyz="100" data-xyz="100" y="100" id="element" href="#">a</a>
+
+<script>
+    var element = document.getElementById('element');
+
+    require({
+            'paths' : {
+                benchmark : '../bower_components/benchmark/benchmark',
+                lodash    : '../bower_components/lodash/lodash',
+                platform  : '../bower_components/benchmark/vendor/platform.js',
+                jquery    : '../bower_components/jquery/jquery'
+
+            }
+        },
+        ['benchmark'], function(Benchmark){
+            var suite = new Benchmark.Suite;
+
+            suite.add('getAttribute(x)', function(){
+                var attr = element.getAttribute('x');
+            });
+
+            suite.add('getAttribute(y)', function(){
+                var attr = element.getAttribute('y');
+            });
+
+            suite.add('getAttribute(urr)', function(){
+                var attr = element.getAttribute('xyz');
+            });
+
+            suite.add('getAttribute(data-xyz)', function(){
+                var attr = element.getAttribute('data-xyz');
+            });
+
+            suite.add('dataset.xyz', function(){
+                var attr = element.dataset.xyz;
+            });
+
+            suite.on('cycle', function(e){
+                console.log(String(e.target));
+            });
+
+            suite.on('error', function(e){
+                console.log('Error', e);
+            });
+
+            suite.on('complete', function(){
+                console.log('Fastest is ' + this.filter('fastest').pluck('name'));
+            });
+
+
+            //console.log('i :', ITERATIONS);
+            suite.run({ 'async' : true });
+        });
+</script>
+</body>
+</html>
