@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="../bower_components/requirejs/require.js"></script>
+</head>
+<body>
+
+<script>
+    var ITERATIONS = 1;
+    var MULTIPLIER = 10;
+//    var MAX = 1000;
+    var MAX = 1;
+
+    require({
+                'paths' : {
+                    benchmark : '../bower_components/benchmark/benchmark',
+                    lodash    : '../bower_components/lodash/lodash',
+                    platform  : '../bower_components/benchmark/vendor/platform.js'
+
+                }
+            },
+            ['benchmark'], function(Benchmark, jQuery){
+                var suite = new Benchmark.Suite;
+
+                var data = [];
+                var g_cache =  {};
+                var i, l;
+
+                for(i = 0, l = 10000; i < l; i++) {
+                    data.push(i);
+                    g_cache[data[i]] = true;
+                }
+
+                var search_for = [0, 250, 500, 750, 999, 10000];
+
+                suite.add('array.indexOf', function(){
+                    var found, i, l;
+
+                    for(i = 0, l = search_for.length; i < l; i++) {
+                        found = data.indexOf(search_for[i]) !== -1;
+                    }
+                });
+
+                suite.add('object[k] new cache', function(){
+                    var found, i, l, cache;
+
+                    //prepare cache
+                    cache = {};
+
+                    for(i = 0, l = data.length; i < l; i++) {
+                        cache[data[i]] = true;
+                    }
+
+
+                    for(i = 0, l = search_for.length; i < l; i++) {
+                        found = cache[search_for[i]] === true;
+                    }
+                });
+
+                suite.add('object[k] existing cache', function(){
+                    var found, i, l;
+
+                    for(i = 0, l = search_for.length; i < l; i++) {
+                        found = g_cache[search_for[i]] === true;
+                    }
+                });
+
+                suite.on('cycle', function(event){
+                    console.log(String(event.target));
+                });
+
+                suite.on('complete', function(){
+                    console.log('Fastest is ' + this.filter('fastest').pluck('name'));
+
+                    if (ITERATIONS < MAX) {
+                        ITERATIONS *= MULTIPLIER;
+                        console.log('i :', ITERATIONS);
+                        suite.run({ 'async' : true });
+                    }
+                });
+
+
+                console.log('i :', ITERATIONS);
+                suite.run({ 'async' : true });
+            });
+</script>
+
+</body>
+</html>
