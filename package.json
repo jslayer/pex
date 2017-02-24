@@ -1,0 +1,39 @@
+{
+  "name": "pex",
+  "version": "1.0.0",
+  "description": "pex ===",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "run-1": "babel-node src/reselect.js"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jslayer/pex.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jslayer/pex/issues"
+  },
+  "homepage": "https://github.com/jslayer/pex#readme",
+  "devDependencies": {
+    "babel-cli": "^6.23.0",
+    "babel-preset-es2015": "^6.22.0",
+    "lodash": "^4.17.4",
+    "memoizee": "^0.4.3",
+    "microtime": "^2.1.2",
+    "reselect": "^2.5.4"
+  },
+  "dependencies": {
+    "benchmark": "^2.1.3"
+  }
+}
