@@ -62,9 +62,6 @@ const myCustom = customCreateSelector(
     plainSelectIndexes,
 );
 
-console.log(selectVisibleIndexes2(state0));
-console.log(selectVisibleIndexes2(state0));
-
 const suite = new Benchmark.Suite;
 
 // add tests
@@ -72,21 +69,21 @@ suite
     .add("visibleIndexes#selector", function () {
         const l = selectVisibleIndexes(state0);
     })
-    .add("visibleIndexes#selectorCustomMemo", function () {
-        const l = selectVisibleIndexes(state0);
-    })
-    .add("visibleIndexes#plain", function () {
-        const l = plainSelectIndexes(state0.tablesMap, state0.tables);
-    })
+    // .add("visibleIndexes#selectorCustomMemo", function () {
+    //     const l = selectVisibleIndexes(state0);
+    // })
+    // .add("visibleIndexes#plain", function () {
+    //     const l = plainSelectIndexes(state0.tablesMap, state0.tables);
+    // })
     .add("visibleIndexes#memoized", function () {
         const l = memoizedSelectIndexes(state0.tablesMap, state0.tables);
     })
-    .add("visibleIndexes#memoized2", function () {
-        const l = memoizedSelectIndexes2(state0);
-    })
-    .add("visibleIndexes#myCustom", function () {
-        const l = myCustom(state0);
-    })
+    // .add("visibleIndexes#memoized2", function () {
+    //     const l = memoizedSelectIndexes2(state0);
+    // })
+    // .add("visibleIndexes#myCustom", function () {
+    //     const l = myCustom(state0);
+    // })
     // add listeners
     .on("cycle", function (event) {
         console.log(String(event.target));
@@ -94,4 +91,4 @@ suite
     .on("complete", function () {
         console.log("Fastest is " + this.filter("fastest").map("name"));
     })
-    .run({ "async": true });
+.run({ "async": true });
